@@ -16,7 +16,14 @@ export const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
-  serverExternalPackages: ["better-sqlite3"],
+  serverExternalPackages: [
+    "better-sqlite3",
+    "@node-rs/argon2",
+    "@zxcvbn-ts/core",
+    "@zxcvbn-ts/language-common",
+    "@zxcvbn-ts/language-en",
+    "@zxcvbn-ts/language-fr",
+  ],
   // Next.js is always started from the project folder.
   turbopack: { root: process.cwd() },
   async headers() {

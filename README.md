@@ -2,7 +2,7 @@
 
 Journal de voyage privé (nom technique : `rjaroundtheworld`). Le site n'est accessible que par un lien secret et n'est jamais indexé par les moteurs de recherche.
 
-> **État du projet** : Phase 1 en cours. Étape 1 (socle) terminée : configuration, base de données, migrations, interdiction d'indexation, tests. Ce README sera complété à chaque étape.
+> **État du projet** : Phase 1 en cours. Étapes terminées : 1 (socle) et 2 (lien secret, connexion, sessions, profil). Ce README est complété à chaque étape.
 
 ## Prérequis
 
@@ -37,6 +37,41 @@ Pour tester la version de production en local :
 npm run build
 npm start
 ```
+
+## Créer le compte superuser
+
+```bash
+npm run create-superuser
+```
+
+Le script demande l'identifiant, le nom affiché et le mot de passe (10 caractères minimum, les mots de passe trop courants sont refusés). Il n'y a qu'un seul superuser.
+
+Si le superuser existe déjà, le même script propose de lui définir un nouveau mot de passe : c'est la procédure à suivre si tu oublies le tien. Toutes ses sessions sont alors fermées.
+
+Pour un usage automatisé, les réponses peuvent être fournies par les variables `SUPERUSER_USERNAME`, `SUPERUSER_DISPLAY_NAME` et `SUPERUSER_PASSWORD`.
+
+## Lien secret
+
+Le site ne répond qu'aux navigateurs qui ont ouvert le lien secret au moins une fois :
+
+```
+<APP_URL>/access/<ACCESS_TOKEN>
+```
+
+En local : `http://localhost:3000/access/` suivi de la valeur de `ACCESS_TOKEN` dans `.env`.
+
+- Le lien dépose un cookie d'accès valable 400 jours, puis redirige vers l'accueil : le token ne reste pas dans la barre d'adresse.
+- Sans ce cookie, toutes les adresses (pages, connexion, fichiers) renvoient la même réponse 404 neutre. Seul `robots.txt` reste public.
+- Le lien est fixe. En cas de fuite, changer `ACCESS_TOKEN` dans la configuration puis redémarrer : l'ancien lien et tous les cookies d'accès cessent de fonctionner, et il faut transmettre le nouveau lien à tout le monde.
+
+## Comptes et sécurité
+
+- Pas d'inscription libre : seuls le script ci-dessus et (à partir de l'étape 3) la page d'administration créent des comptes.
+- Mots de passe hachés avec argon2id. La vérification des mots de passe trop courants est locale (aucun appel externe).
+- Sessions par cookie `httpOnly`, `sameSite=lax`, et `Secure` dès que `APP_URL` est en `https`. Une session expire après `SESSION_DAYS` jours sans visite.
+- Changer son mot de passe (page « Mon profil ») ferme toutes les autres sessions du compte.
+- Anti brute force : 5 échecs en 15 minutes bloquent l'identifiant pendant 15 minutes ; 20 échecs bloquent l'adresse IP (derrière un reverse proxy, avec `TRUST_PROXY=true`).
+- Protection CSRF : toute requête de modification doit provenir du site lui-même (en-tête `Origin` égal à `APP_URL`).
 
 ## Variables d'environnement
 
@@ -84,7 +119,12 @@ Les tests utilisent une base SQLite en mémoire, avec les vraies migrations.
 drizzle/            migrations SQL
 scripts/            scripts en ligne de commande
 src/app/            pages et routes (Next.js App Router)
-src/lib/            code partagé (configuration, nom du site)
+src/components/     composants d'interface
+src/lib/            code partagé (configuration, textes, nom du site)
+src/proxy.ts        contrôle d'accès appliqué à toutes les requêtes
+src/server/actions/ actions de formulaire (couche fine)
+src/server/auth/    lien secret, sessions, mots de passe, anti brute force
 src/server/db/      schéma et connexion à la base
+src/server/services/ logique métier, couverte par les tests
 tests/              tests automatisés
 ```

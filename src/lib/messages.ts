@@ -1,0 +1,32 @@
+// User-facing texts (French only) for results returned by the server.
+import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from "./password-rules";
+
+function minutes(ms: number): string {
+  const value = Math.max(1, Math.ceil(ms / 60_000));
+  return `${value} minute${value > 1 ? "s" : ""}`;
+}
+
+export const messages = {
+  rateLimited: (retryAfterMs: number) => `Trop de tentatives. Réessayez dans ${minutes(retryAfterMs)}.`,
+  login: {
+    missing_fields: "Saisissez votre identifiant et votre mot de passe.",
+    invalid_credentials: "Identifiant ou mot de passe incorrect.",
+  },
+  password: {
+    missing_fields: "Remplissez les trois champs.",
+    wrong_current_password: "Le mot de passe actuel est incorrect.",
+    confirmation_mismatch: "Les deux saisies du nouveau mot de passe ne correspondent pas.",
+    same_as_current: "Le nouveau mot de passe doit être différent de l'actuel.",
+    password_too_short: `Le mot de passe doit contenir au moins ${PASSWORD_MIN_LENGTH} caractères.`,
+    password_too_long: `Le mot de passe est trop long (${PASSWORD_MAX_LENGTH} caractères au maximum).`,
+    password_too_common: "Ce mot de passe est trop courant ou trop facile à deviner. Choisissez-en un autre.",
+    changed: "Votre mot de passe a été modifié.",
+  },
+  user: {
+    invalid_username:
+      "L'identifiant doit contenir entre 3 et 30 caractères : lettres minuscules, chiffres, point, tiret ou tiret bas.",
+    username_taken: "Cet identifiant est déjà utilisé.",
+    invalid_display_name: "Le nom affiché doit contenir entre 1 et 50 caractères.",
+    user_not_found: "Ce compte n'existe pas.",
+  },
+} as const;
