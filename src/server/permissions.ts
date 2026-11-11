@@ -6,24 +6,25 @@ import type { EntryStatus } from "@/server/db/schema";
  * Every service calls these functions before reading or changing data;
  * the interface only uses them to hide what would be refused anyway.
  *
- *                          anonymous  user   +Publier  +Gérer les voyages  superuser
- *   see a visible trip        yes     yes      yes          yes             yes
- *   see a hidden trip         no      no       yes          yes             yes
- *   see a published entry     (same as its trip)
- *   see a draft               no      own      own          own             yes
- *   create an entry           no      no       yes          no              yes
- *   edit / delete an entry    no      no       own          no              yes
- *   see comments, reactions   no      yes      yes          yes             yes
- *   comment                   no      if Commenter                          yes
- *   edit / delete a comment   no      own, if Commenter                     yes
- *   react                     no      if Réagir                             yes
- *   create / edit a trip      no      no       no           yes             yes
- *   delete an empty trip      no      no       no           yes             yes
- *   delete a trip + entries   no      no       no           no              yes
- *   manage users              no      no       no           no              yes
+ * Four independent switches per user: Commenter, Réagir, Publier and
+ * Gérer les voyages. "anonymous" is a visitor who only has the secret link.
  *
- * "anonymous" is a visitor who only has the secret link. Permissions are
- * independent switches: a user can have both Publier and Gérer les voyages.
+ *                              anonymous   user              superuser
+ *   see a visible trip            yes      yes                 yes
+ *   see a hidden trip             no       its author only     yes
+ *   see a published entry         (same as its trip)
+ *   see a draft                   no       its author only     yes
+ *   create an entry               no       if Publier (*)      yes
+ *   edit / delete an entry        no       own, if Publier (*) yes
+ *   see comments, reactions       no       yes (*)             yes
+ *   comment                       no       if Commenter (*)    yes
+ *   edit / delete a comment       no       own, if Commenter   yes
+ *   react                         no       if Réagir (*)       yes
+ *   create a trip                 no       if Gérer les voyages yes
+ *   edit / hide / delete a trip   no       own, if Gérer les voyages  yes
+ *   manage users                  no       no                  yes
+ *
+ * (*) only in trips the user can see.
  */
 
 export type PermissionUser = Pick<
@@ -34,7 +35,7 @@ export type PermissionUser = Pick<
 /** The person making a request: a user, or null for an anonymous visitor. */
 export type Actor = PermissionUser | null;
 
-export type TripAccess = { isVisible: boolean };
+export type TripAccess = { isVisible: boolean; authorId: number | null };
 export type EntryAccess = { authorId: number; status: EntryStatus };
 export type CommentAccess = { authorId: number | null; deletedAt: Date | null };
 
@@ -54,27 +55,26 @@ export function canManageUsers(actor: Actor): boolean {
   return isSuperuser(effectiveUser(actor));
 }
 
-/** Creating trips, editing them and changing their visibility (any trip). */
-export function canManageTrips(actor: Actor): boolean {
+export function canCreateTrip(actor: Actor): boolean {
   const user = effectiveUser(actor);
   return user !== null && (isSuperuser(user) || user.canManageTrips);
 }
 
 /**
- * Deleting a trip. Deleting one that has entries destroys other people's
- * content, which only the superuser may do; a trip manager can only delete
- * an empty trip.
+ * Editing a trip, changing its visibility and deleting it (with its
+ * entries): reserved to the user who created it, and to the superuser.
  */
-export function canDeleteTrip(actor: Actor, trip: { hasEntries: boolean }): boolean {
-  if (!canManageTrips(actor)) return false;
-  return !trip.hasEntries || isSuperuser(effectiveUser(actor));
+export function canEditTrip(actor: Actor, trip: TripAccess): boolean {
+  const user = effectiveUser(actor);
+  if (user === null) return false;
+  return isSuperuser(user) || (user.canManageTrips && trip.authorId === user.id);
 }
 
-/** A hidden trip exists only for those who write in it or manage it. */
+/** A hidden trip exists only for the user who created it and for the superuser. */
 export function canViewTrip(actor: Actor, trip: TripAccess): boolean {
   if (trip.isVisible) return true;
   const user = effectiveUser(actor);
-  return user !== null && (isSuperuser(user) || user.canPublish || user.canManageTrips);
+  return user !== null && (isSuperuser(user) || trip.authorId === user.id);
 }
 
 /** Also governs the entry's media and its place on the map. */
@@ -85,9 +85,14 @@ export function canViewEntry(actor: Actor, trip: TripAccess, entry: EntryAccess)
   return user !== null && (isSuperuser(user) || entry.authorId === user.id);
 }
 
-export function canCreateEntry(actor: Actor, trip: TripAccess): boolean {
+/** Whether the actor may write journal entries at all (superuser or Publier). */
+export function canWriteEntries(actor: Actor): boolean {
   const user = effectiveUser(actor);
-  return user !== null && (isSuperuser(user) || user.canPublish) && canViewTrip(actor, trip);
+  return user !== null && (isSuperuser(user) || user.canPublish);
+}
+
+export function canCreateEntry(actor: Actor, trip: TripAccess): boolean {
+  return canWriteEntries(actor) && canViewTrip(actor, trip);
 }
 
 /** Saving, publishing, unpublishing, deleting an entry and managing its media. */

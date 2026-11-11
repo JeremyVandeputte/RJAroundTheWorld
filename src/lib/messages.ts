@@ -30,10 +30,8 @@ export const messages = {
     user_not_found: "Ce compte n'existe pas.",
   },
   trip: {
-    forbidden: "Vous n'avez pas la permission de gérer les voyages.",
+    forbidden: "Vous n'avez pas le droit de créer ou de modifier ce voyage.",
     trip_not_found: "Ce voyage n'existe pas.",
-    trip_has_entries:
-      "Ce voyage contient des entrées : seul l'administrateur peut le supprimer avec son contenu.",
     invalid_title: "Le titre du voyage doit contenir entre 1 et 100 caractères.",
     invalid_description: "La description ne doit pas dépasser 500 caractères.",
     invalid_dates: "Indiquez une date de début et une date de fin valides.",

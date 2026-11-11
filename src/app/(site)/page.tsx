@@ -4,7 +4,7 @@ import { LinkButton } from "@/components/ui/link-button";
 import { formatDateRange } from "@/lib/dates";
 import { getViewer } from "@/server/auth/current-user";
 import { getDb } from "@/server/db/client";
-import { canManageTrips } from "@/server/permissions";
+import { canCreateTrip } from "@/server/permissions";
 import { listTrips } from "@/server/services/trips";
 
 export default async function HomePage() {
@@ -15,7 +15,7 @@ export default async function HomePage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">Voyages</h1>
-        {canManageTrips(viewer) ? <LinkButton href="/trips/new">Nouveau voyage</LinkButton> : null}
+        {canCreateTrip(viewer) ? <LinkButton href="/trips/new">Nouveau voyage</LinkButton> : null}
       </div>
 
       {trips.length === 0 ? (

@@ -3,12 +3,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { TripForm } from "@/components/trips/trip-form";
 import { getViewer } from "@/server/auth/current-user";
-import { canManageTrips } from "@/server/permissions";
+import { canCreateTrip } from "@/server/permissions";
 
 export const metadata: Metadata = { title: "Nouveau voyage" };
 
 export default async function NewTripPage() {
-  if (!canManageTrips(await getViewer())) notFound();
+  if (!canCreateTrip(await getViewer())) notFound();
   return (
     <div className="mx-auto max-w-xl">
       <Link href="/" className="text-sm text-accent underline-offset-4 hover:underline">

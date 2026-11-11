@@ -2,8 +2,8 @@ import { count, desc, eq } from "drizzle-orm";
 import { isValidDateString } from "@/lib/dates";
 import { slugify } from "@/lib/slug";
 import type { Db } from "@/server/db/client";
-import { entries, trips } from "@/server/db/schema";
-import { canDeleteTrip, canManageTrips, canViewTrip, type Actor } from "@/server/permissions";
+import { entries, trips, users } from "@/server/db/schema";
+import { canCreateTrip, canEditTrip, canViewTrip, type Actor } from "@/server/permissions";
 
 export type Trip = typeof trips.$inferSelect;
 
@@ -44,6 +44,17 @@ export function getTripById(db: Db, actor: Actor, tripId: number): Trip | null {
   return trip && canViewTrip(actor, trip) ? trip : null;
 }
 
+/** Display name of the user who created the trip, if that account still exists. */
+export function getTripAuthorName(db: Db, trip: Trip): string | null {
+  if (trip.authorId === null) return null;
+  return db.select({ name: users.displayName }).from(users).where(eq(users.id, trip.authorId)).get()?.name ?? null;
+}
+
+/** Number of entries of a trip, drafts included (shown before deleting it). */
+export function countTripEntries(db: Db, tripId: number): number {
+  return db.select({ total: count() }).from(entries).where(eq(entries.tripId, tripId)).get()?.total ?? 0;
+}
+
 function validate(input: TripInput): TripIssue | null {
   const title = input.title.trim();
   if (title.length === 0 || title.length > TRIP_TITLE_MAX_LENGTH) return "invalid_title";
@@ -62,16 +73,20 @@ function uniqueSlug(db: Db, title: string): string {
   }
 }
 
-export type SaveTripResult = { ok: true; trip: Trip } | { ok: false; reason: "forbidden" | "trip_not_found" | TripIssue };
+type TripRefusal = "forbidden" | "trip_not_found";
 
+export type SaveTripResult = { ok: true; trip: Trip } | { ok: false; reason: TripRefusal | TripIssue };
+
+/** The creator of a trip is recorded: only they and the superuser can change it later. */
 export function createTrip(db: Db, actor: Actor, input: TripInput): SaveTripResult {
-  if (!canManageTrips(actor)) return { ok: false, reason: "forbidden" };
+  if (!actor || !canCreateTrip(actor)) return { ok: false, reason: "forbidden" };
   const issue = validate(input);
   if (issue) return { ok: false, reason: issue };
 
   const trip = db
     .insert(trips)
     .values({
+      authorId: actor.id,
       slug: uniqueSlug(db, input.title),
       title: input.title.trim(),
       description: input.description.trim(),
@@ -84,9 +99,21 @@ export function createTrip(db: Db, actor: Actor, input: TripInput): SaveTripResu
   return { ok: true, trip };
 }
 
-/** Edits a trip, including its visibility. The slug never changes, so links stay valid. */
+/** Loads a trip for a change; a trip the actor cannot see is reported as unknown. */
+function findEditable(db: Db, actor: Actor, tripId: number): { ok: true; trip: Trip } | { ok: false; reason: TripRefusal } {
+  const trip = db.select().from(trips).where(eq(trips.id, tripId)).get();
+  if (!trip || !canViewTrip(actor, trip)) return { ok: false, reason: "trip_not_found" };
+  if (!canEditTrip(actor, trip)) return { ok: false, reason: "forbidden" };
+  return { ok: true, trip };
+}
+
+/**
+ * Edits a trip, including its visibility. The slug and the author never
+ * change, so links stay valid and the trip keeps its owner.
+ */
 export function updateTrip(db: Db, actor: Actor, tripId: number, input: TripInput): SaveTripResult {
-  if (!canManageTrips(actor)) return { ok: false, reason: "forbidden" };
+  const found = findEditable(db, actor, tripId);
+  if (!found.ok) return found;
   const issue = validate(input);
   if (issue) return { ok: false, reason: issue };
 
@@ -105,24 +132,10 @@ export function updateTrip(db: Db, actor: Actor, tripId: number, input: TripInpu
   return trip ? { ok: true, trip } : { ok: false, reason: "trip_not_found" };
 }
 
-/** Number of entries of a trip, drafts included (used before deleting it). */
-export function countTripEntries(db: Db, tripId: number): number {
-  return db.select({ total: count() }).from(entries).where(eq(entries.tripId, tripId)).get()?.total ?? 0;
-}
-
-export type DeleteTripResult = { ok: true } | { ok: false; reason: "forbidden" | "trip_not_found" | "trip_has_entries" };
-
-/**
- * Deletes a trip. A trip that still has entries can only be deleted by the
- * superuser, together with all its entries, comments and reactions.
- */
-export function deleteTrip(db: Db, actor: Actor, tripId: number): DeleteTripResult {
-  const trip = db.select().from(trips).where(eq(trips.id, tripId)).get();
-  if (!trip || !canViewTrip(actor, trip)) return { ok: false, reason: "trip_not_found" };
-  if (!canManageTrips(actor)) return { ok: false, reason: "forbidden" };
-  if (!canDeleteTrip(actor, { hasEntries: countTripEntries(db, tripId) > 0 })) {
-    return { ok: false, reason: "trip_has_entries" };
-  }
+/** Deletes a trip together with all its entries, their comments and reactions. */
+export function deleteTrip(db: Db, actor: Actor, tripId: number): { ok: true } | { ok: false; reason: TripRefusal } {
+  const found = findEditable(db, actor, tripId);
+  if (!found.ok) return found;
 
   db.transaction((tx) => {
     // Comments, reactions, notifications and tags go with their entry.

@@ -2,7 +2,7 @@ import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { isValidDateString } from "@/lib/dates";
 import type { Db } from "@/server/db/client";
 import { entries, entryPeople, trips, users, type EntryStatus } from "@/server/db/schema";
-import { canCreateEntry, canEditEntry, canViewEntry, canViewTrip, type Actor } from "@/server/permissions";
+import { canCreateEntry, canEditEntry, canViewEntry, canViewTrip, canWriteEntries, type Actor } from "@/server/permissions";
 import type { Trip } from "./trips";
 
 export type Entry = typeof entries.$inferSelect;
@@ -87,8 +87,7 @@ export function getEntry(db: Db, actor: Actor, trip: Trip, entryId: number): Ent
 
 /** Accounts that can be identified in an entry, for people allowed to write one. */
 export function listTaggableUsers(db: Db, actor: Actor): Person[] {
-  // Being able to write in a hidden trip is exactly "superuser or Publier".
-  if (!canCreateEntry(actor, { isVisible: false })) return [];
+  if (!canWriteEntries(actor)) return [];
   return db
     .select({ id: users.id, displayName: users.displayName })
     .from(users)

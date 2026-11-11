@@ -41,7 +41,7 @@ export function TripForm({ trip }: TripFormProps) {
         label="Voyage visible"
         name="isVisible"
         defaultChecked={trip?.isVisible ?? false}
-        hint="Décoché : seuls vous et les personnes ayant la permission Publier voient ce voyage. Coché : toutes ses entrées publiées deviennent visibles d'un coup."
+        hint="Décoché : seuls la personne qui a créé le voyage et l'administrateur le voient. Coché : toutes ses entrées publiées deviennent visibles d'un coup."
       />
       <FormMessage state={state} />
       <SubmitButton pending={pending} pendingLabel="Enregistrement…">

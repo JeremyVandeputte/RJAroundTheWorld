@@ -6,7 +6,7 @@ import { LinkButton } from "@/components/ui/link-button";
 import { formatDate, formatDateRange } from "@/lib/dates";
 import { getDb } from "@/server/db/client";
 import { loadTrip } from "@/server/page-data";
-import { canCreateEntry, canManageTrips } from "@/server/permissions";
+import { canCreateEntry, canEditTrip } from "@/server/permissions";
 import { listEntries } from "@/server/services/entries";
 
 type TripPageProps = { params: Promise<{ tripSlug: string }> };
@@ -35,14 +35,14 @@ export default async function TripPage({ params }: TripPageProps) {
         {trip.description ? <p className="mt-3">{trip.description}</p> : null}
       </div>
 
-      {canCreateEntry(viewer, trip) || canManageTrips(viewer) ? (
+      {canCreateEntry(viewer, trip) || canEditTrip(viewer, trip) ? (
         <div className="flex flex-wrap gap-3">
           {canCreateEntry(viewer, trip) ? (
             <LinkButton href={`/trips/${trip.slug}/entries/new`} variant="primary">
               Nouvelle entrée
             </LinkButton>
           ) : null}
-          {canManageTrips(viewer) ? <LinkButton href={`/trips/${trip.slug}/edit`}>Modifier le voyage</LinkButton> : null}
+          {canEditTrip(viewer, trip) ? <LinkButton href={`/trips/${trip.slug}/edit`}>Modifier le voyage</LinkButton> : null}
         </div>
       ) : null}
 

@@ -45,7 +45,7 @@ export const users = sqliteTable("users", {
   canPublish: integer("can_publish", { mode: "boolean" }).notNull().default(false),
   canComment: integer("can_comment", { mode: "boolean" }).notNull().default(true),
   canReact: integer("can_react", { mode: "boolean" }).notNull().default(true),
-  /** Create, edit and delete trips, and change their visibility. */
+  /** Create trips, then edit, hide or delete the ones this user created. */
   canManageTrips: integer("can_manage_trips", { mode: "boolean" }).notNull().default(false),
   mustChangePassword: integer("must_change_password", { mode: "boolean" }).notNull().default(false),
   isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
@@ -84,6 +84,8 @@ export const loginAttempts = sqliteTable(
 
 export const trips = sqliteTable("trips", {
   id: id(),
+  /** Creator of the trip. Null once that account has been deleted: superuser only. */
+  authorId: integer("author_id").references(() => users.id, { onDelete: "set null" }),
   slug: text("slug").notNull().unique(),
   title: text("title").notNull(),
   description: text("description").notNull().default(""),

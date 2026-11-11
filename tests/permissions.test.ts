@@ -2,17 +2,18 @@ import { describe, expect, it } from "vitest";
 import {
   canBeNotifiedAbout,
   canComment,
-  canDeleteTrip,
   canCreateEntry,
+  canCreateTrip,
   canDeleteComment,
   canEditComment,
   canEditEntry,
-  canManageTrips,
+  canEditTrip,
   canManageUsers,
   canReact,
   canViewEntry,
   canViewSocial,
   canViewTrip,
+  canWriteEntries,
   type Actor,
   type PermissionUser,
 } from "@/server/permissions";
@@ -41,8 +42,8 @@ const superuser = user(5, { role: "superuser", canPublish: true });
 const deactivated = user(6, { canPublish: true, isActive: false });
 const mustChange = user(7, { canPublish: true, mustChangePassword: true });
 const lockedSuperuser = user(8, { role: "superuser", mustChangePassword: true });
-const manager = user(9, { canManageTrips: true }); // Gérer les voyages, without Publier
-const lockedManager = user(10, { canManageTrips: true, mustChangePassword: true });
+const tripOwner = user(9, { canManageTrips: true, canPublish: true }); // created the hidden trip
+const otherManager = user(10, { canManageTrips: true, canPublish: true });
 
 const everyone = {
   anonymous,
@@ -54,10 +55,11 @@ const everyone = {
   deactivated,
   mustChange,
   lockedSuperuser,
-  manager,
-  lockedManager,
+  tripOwner,
+  otherManager,
 };
 type Name = keyof typeof everyone;
+const allNames = Object.keys(everyone) as Name[];
 
 /** Asserts that exactly the listed actors are allowed. */
 function expectAllowed(check: (actor: Actor) => boolean, allowed: Name[]) {
@@ -66,8 +68,10 @@ function expectAllowed(check: (actor: Actor) => boolean, allowed: Name[]) {
   }
 }
 
-const visibleTrip = { isVisible: true };
-const hiddenTrip = { isVisible: false };
+const visibleTrip = { isVisible: true, authorId: superuser.id };
+const hiddenTrip = { isVisible: false, authorId: tripOwner.id };
+const ownersVisibleTrip = { isVisible: true, authorId: tripOwner.id };
+const orphanTrip = { isVisible: false, authorId: null };
 const published = { authorId: publisher.id, status: "published" } as const;
 const draft = { authorId: publisher.id, status: "draft" } as const;
 
@@ -78,68 +82,90 @@ describe("administration", () => {
 });
 
 describe("trip management", () => {
-  it("requires the Gérer les voyages permission (or superuser)", () => {
-    expectAllowed(canManageTrips, ["manager", "superuser"]);
+  it("requires Gérer les voyages (or superuser) to create a trip", () => {
+    expectAllowed(canCreateTrip, ["tripOwner", "otherManager", "superuser"]);
+    expect(canCreateTrip(publisher)).toBe(false);
   });
 
-  it("is not granted by Publier, nor Publier by it", () => {
-    expect(canManageTrips(publisher)).toBe(false);
-    expect(canCreateEntry(manager, visibleTrip)).toBe(false);
-    const both = { ...publisher, canManageTrips: true };
-    expect(canManageTrips(both) && canCreateEntry(both, hiddenTrip)).toBe(true);
+  it("lets only the creator of a trip and the superuser edit, hide or delete it", () => {
+    for (const trip of [hiddenTrip, ownersVisibleTrip]) {
+      expectAllowed((actor) => canEditTrip(actor, trip), ["tripOwner", "superuser"]);
+    }
+    // A trip created by the superuser: nobody else, not even another manager.
+    expectAllowed((actor) => canEditTrip(actor, visibleTrip), ["superuser"]);
   });
 
-  it("lets a trip manager delete an empty trip only", () => {
-    expectAllowed((actor) => canDeleteTrip(actor, { hasEntries: false }), ["manager", "superuser"]);
+  it("stops the creator from changing the trip once Gérer les voyages is removed", () => {
+    const former = { ...tripOwner, canManageTrips: false };
+    expect(canEditTrip(former, hiddenTrip)).toBe(false);
+    expect(canEditTrip(former, ownersVisibleTrip)).toBe(false);
+    // The trip is still theirs to see.
+    expect(canViewTrip(former, hiddenTrip)).toBe(true);
   });
 
-  it("reserves deleting a trip with its entries to the superuser", () => {
-    expectAllowed((actor) => canDeleteTrip(actor, { hasEntries: true }), ["superuser"]);
+  it("leaves a trip whose creator was deleted to the superuser alone", () => {
+    expectAllowed((actor) => canViewTrip(actor, orphanTrip), ["superuser"]);
+    expectAllowed((actor) => canEditTrip(actor, orphanTrip), ["superuser"]);
   });
 });
 
 describe("trip visibility", () => {
   it("shows a visible trip to everyone, including anonymous visitors", () => {
-    expectAllowed((actor) => canViewTrip(actor, visibleTrip), Object.keys(everyone) as Name[]);
+    expectAllowed((actor) => canViewTrip(actor, visibleTrip), allNames);
   });
 
-  it("shows a hidden trip only to the superuser and to users with Publier or Gérer les voyages", () => {
-    expectAllowed((actor) => canViewTrip(actor, hiddenTrip), ["publisher", "otherPublisher", "superuser", "manager"]);
+  it("shows a hidden trip only to its creator and to the superuser", () => {
+    expectAllowed((actor) => canViewTrip(actor, hiddenTrip), ["tripOwner", "superuser"]);
+  });
+
+  it("does not open hidden trips to Publier or Gérer les voyages as such", () => {
+    expect(canViewTrip(publisher, hiddenTrip)).toBe(false);
+    expect(canViewTrip(otherManager, hiddenTrip)).toBe(false);
   });
 });
 
 describe("entry visibility", () => {
   it("shows a published entry of a visible trip to everyone", () => {
-    expectAllowed((actor) => canViewEntry(actor, visibleTrip, published), Object.keys(everyone) as Name[]);
+    expectAllowed((actor) => canViewEntry(actor, visibleTrip, published), allNames);
   });
 
   it("hides every entry of a hidden trip, even published, from those who cannot see the trip", () => {
-    expectAllowed((actor) => canViewEntry(actor, hiddenTrip, published), ["publisher", "otherPublisher", "superuser", "manager"]);
+    expectAllowed((actor) => canViewEntry(actor, hiddenTrip, published), ["tripOwner", "superuser"]);
   });
 
   it("shows a draft only to its author and to the superuser", () => {
     expectAllowed((actor) => canViewEntry(actor, visibleTrip, draft), ["publisher", "superuser"]);
-    expectAllowed((actor) => canViewEntry(actor, hiddenTrip, draft), ["publisher", "superuser"]);
+    // Not even the creator of the trip sees someone else's draft.
+    expect(canViewEntry(tripOwner, ownersVisibleTrip, draft)).toBe(false);
   });
 
-  it("hides an author's own draft once they can no longer see its hidden trip", () => {
-    const formerPublisher = { ...publisher, canPublish: false };
-    expect(canViewEntry(formerPublisher, hiddenTrip, draft)).toBe(false);
-    expect(canViewEntry(formerPublisher, visibleTrip, draft)).toBe(true);
+  it("hides an author's own entries once their trip is hidden by its creator", () => {
+    expect(canViewEntry(publisher, hiddenTrip, published)).toBe(false);
+    expect(canViewEntry(publisher, hiddenTrip, draft)).toBe(false);
+    expect(canEditEntry(publisher, hiddenTrip, published)).toBe(false);
   });
 });
 
 describe("writing entries", () => {
-  it("requires Publier (or superuser) to create an entry", () => {
-    expectAllowed((actor) => canCreateEntry(actor, visibleTrip), ["publisher", "otherPublisher", "superuser"]);
-    expectAllowed((actor) => canCreateEntry(actor, hiddenTrip), ["publisher", "otherPublisher", "superuser"]);
+  it("requires Publier (or superuser)", () => {
+    expectAllowed(canWriteEntries, ["publisher", "otherPublisher", "tripOwner", "otherManager", "superuser"]);
+    expectAllowed(
+      (actor) => canCreateEntry(actor, visibleTrip),
+      ["publisher", "otherPublisher", "tripOwner", "otherManager", "superuser"],
+    );
+  });
+
+  it("is only possible in a hidden trip for its creator (with Publier) and the superuser", () => {
+    expectAllowed((actor) => canCreateEntry(actor, hiddenTrip), ["tripOwner", "superuser"]);
+    expect(canCreateEntry({ ...tripOwner, canPublish: false }, hiddenTrip)).toBe(false);
   });
 
   it("lets only the author (with Publier) and the superuser edit an entry", () => {
     for (const entry of [published, draft]) {
       expectAllowed((actor) => canEditEntry(actor, visibleTrip, entry), ["publisher", "superuser"]);
-      expectAllowed((actor) => canEditEntry(actor, hiddenTrip, entry), ["publisher", "superuser"]);
     }
+    // Creating the trip gives no right over other people's entries in it.
+    expect(canEditEntry(tripOwner, ownersVisibleTrip, published)).toBe(false);
   });
 
   it("stops an author from editing once Publier is removed", () => {
@@ -148,15 +174,17 @@ describe("writing entries", () => {
 });
 
 describe("comments and reactions", () => {
+  const loggedIn: Name[] = ["guest", "readOnly", "publisher", "otherPublisher", "superuser", "tripOwner", "otherManager"];
+  const withDefaults: Name[] = ["guest", "publisher", "otherPublisher", "superuser", "tripOwner", "otherManager"];
+
   it("are invisible to anonymous visitors, even as counts", () => {
-    expectAllowed(
-      (actor) => canViewSocial(actor, visibleTrip, published),
-      ["guest", "readOnly", "publisher", "otherPublisher", "superuser", "manager"],
-    );
+    expectAllowed((actor) => canViewSocial(actor, visibleTrip, published), loggedIn);
   });
 
   it("follow the visibility of the trip", () => {
-    expectAllowed((actor) => canViewSocial(actor, hiddenTrip, published), ["publisher", "otherPublisher", "superuser", "manager"]);
+    expectAllowed((actor) => canViewSocial(actor, hiddenTrip, published), ["tripOwner", "superuser"]);
+    expectAllowed((actor) => canComment(actor, hiddenTrip, published), ["tripOwner", "superuser"]);
+    expectAllowed((actor) => canReact(actor, hiddenTrip, published), ["tripOwner", "superuser"]);
   });
 
   it("do not exist on drafts", () => {
@@ -166,27 +194,15 @@ describe("comments and reactions", () => {
   });
 
   it("require the Commenter permission to comment", () => {
-    expectAllowed(
-      (actor) => canComment(actor, visibleTrip, published),
-      ["guest", "publisher", "otherPublisher", "superuser", "manager"],
-    );
+    expectAllowed((actor) => canComment(actor, visibleTrip, published), withDefaults);
     expect(canComment({ ...guest, canComment: false }, visibleTrip, published)).toBe(false);
     // The superuser can always comment, whatever the flags say.
     expect(canComment({ ...superuser, canComment: false }, visibleTrip, published)).toBe(true);
   });
 
   it("require the Réagir permission to react", () => {
-    expectAllowed(
-      (actor) => canReact(actor, visibleTrip, published),
-      ["guest", "publisher", "otherPublisher", "superuser", "manager"],
-    );
+    expectAllowed((actor) => canReact(actor, visibleTrip, published), withDefaults);
     expect(canReact({ ...guest, canReact: false }, visibleTrip, published)).toBe(false);
-  });
-
-  it("refuse comments and reactions on a hidden trip to users who cannot see it", () => {
-    const seesHiddenTrip: Name[] = ["publisher", "otherPublisher", "superuser", "manager"];
-    expectAllowed((actor) => canComment(actor, hiddenTrip, published), seesHiddenTrip);
-    expectAllowed((actor) => canReact(actor, hiddenTrip, published), seesHiddenTrip);
   });
 
   it("let users change only their own comments, and the superuser any comment", () => {
@@ -215,26 +231,31 @@ describe("notifications", () => {
   it("are only created for users who can see the entry", () => {
     expect(canBeNotifiedAbout(guest, visibleTrip, published)).toBe(true);
     expect(canBeNotifiedAbout(guest, hiddenTrip, published)).toBe(false);
-    expect(canBeNotifiedAbout(publisher, hiddenTrip, published)).toBe(true);
-    expect(canBeNotifiedAbout(manager, hiddenTrip, published)).toBe(true);
+    expect(canBeNotifiedAbout(publisher, hiddenTrip, published)).toBe(false);
+    expect(canBeNotifiedAbout(otherManager, hiddenTrip, published)).toBe(false);
+    expect(canBeNotifiedAbout(tripOwner, hiddenTrip, published)).toBe(true);
     expect(canBeNotifiedAbout(superuser, hiddenTrip, published)).toBe(true);
     expect(canBeNotifiedAbout(guest, visibleTrip, draft)).toBe(false);
   });
 
   it("skip deactivated accounts but not accounts waiting for a password change", () => {
     expect(canBeNotifiedAbout(deactivated, visibleTrip, published)).toBe(false);
-    expect(canBeNotifiedAbout(mustChange, hiddenTrip, published)).toBe(true);
+    expect(canBeNotifiedAbout(mustChange, visibleTrip, published)).toBe(true);
+    expect(canBeNotifiedAbout({ ...tripOwner, mustChangePassword: true }, hiddenTrip, published)).toBe(true);
   });
 });
 
 describe("restricted accounts", () => {
   it("give a deactivated account or one awaiting a password change no more than an anonymous visitor", () => {
-    for (const actor of [deactivated, mustChange, lockedSuperuser, lockedManager]) {
+    const lockedOwner = { ...tripOwner, mustChangePassword: true };
+    const deactivatedOwner = { ...tripOwner, isActive: false };
+    for (const actor of [deactivated, mustChange, lockedSuperuser, lockedOwner, deactivatedOwner]) {
       expect(canViewTrip(actor, hiddenTrip)).toBe(false);
+      expect(canEditTrip(actor, hiddenTrip)).toBe(false);
+      expect(canCreateTrip(actor)).toBe(false);
       expect(canCreateEntry(actor, visibleTrip)).toBe(false);
       expect(canViewSocial(actor, visibleTrip, published)).toBe(false);
       expect(canManageUsers(actor)).toBe(false);
-      expect(canManageTrips(actor)).toBe(false);
       // Public content stays readable, exactly as for a visitor with the link.
       expect(canViewEntry(actor, visibleTrip, published)).toBe(true);
     }

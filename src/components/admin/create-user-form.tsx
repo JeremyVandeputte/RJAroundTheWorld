@@ -38,11 +38,11 @@ export function CreateUserForm() {
         <legend className="text-sm font-medium">Permissions</legend>
         <CheckboxField label="Commenter" name="canComment" defaultChecked />
         <CheckboxField label="Réagir" name="canReact" defaultChecked />
-        <CheckboxField label="Publier" name="canPublish" hint="Écrire des entrées et voir les voyages non visibles." />
+        <CheckboxField label="Publier" name="canPublish" hint="Écrire des entrées dans les voyages qu'il peut voir." />
         <CheckboxField
           label="Gérer les voyages"
           name="canManageTrips"
-          hint="Créer, modifier et supprimer des voyages, changer leur visibilité."
+          hint="Créer des voyages, puis modifier, masquer ou supprimer ceux qu'il a créés."
         />
       </fieldset>
       <FormMessage state={state} />

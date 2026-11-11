@@ -27,13 +27,13 @@ export function PermissionsForm({ userId, canPublish, canComment, canReact, canM
           label="Publier"
           name="canPublish"
           defaultChecked={canPublish}
-          hint="Écrire des entrées et voir les voyages non visibles."
+          hint="Écrire des entrées dans les voyages qu'il peut voir."
         />
         <CheckboxField
           label="Gérer les voyages"
           name="canManageTrips"
           defaultChecked={canManageTrips}
-          hint="Créer, modifier et supprimer des voyages, changer leur visibilité."
+          hint="Créer des voyages, puis modifier, masquer ou supprimer ceux qu'il a créés."
         />
       </div>
       <FormMessage state={state} />

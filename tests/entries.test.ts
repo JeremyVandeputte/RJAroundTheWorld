@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
+import type { SessionUser } from "@/server/auth/sessions";
 import type { Db } from "@/server/db/client";
 import { comments, entries, entryPeople, users } from "@/server/db/schema";
 import type { Actor } from "@/server/permissions";
@@ -18,11 +19,13 @@ import { createTestDb } from "./helpers/test-db";
 
 let db: Db;
 let cast: ReturnType<typeof insertCast>;
+/** Has both Publier and Gérer les voyages: creates the hidden trip and writes in it. */
+let tripOwner: SessionUser;
 let visibleTrip: Trip;
 let hiddenTrip: Trip;
 
-function mustCreateTrip(overrides = {}): Trip {
-  const result = createTrip(db, cast.superuser, tripInput(overrides));
+function mustCreateTrip(overrides = {}, actor: Actor = cast.superuser): Trip {
+  const result = createTrip(db, actor, tripInput(overrides));
   if (!result.ok) throw new Error(result.reason);
   return result.trip;
 }
@@ -39,8 +42,9 @@ const stored = (id: number) => db.select().from(entries).where(eq(entries.id, id
 beforeEach(() => {
   db = createTestDb();
   cast = insertCast(db);
+  tripOwner = insertUser(db, "chloe", { canPublish: true, canManageTrips: true });
   visibleTrip = mustCreateTrip({ title: "Visible" });
-  hiddenTrip = mustCreateTrip({ title: "Caché", isVisible: false });
+  hiddenTrip = mustCreateTrip({ title: "Caché", isVisible: false }, tripOwner);
 });
 
 describe("drafts and publication", () => {
@@ -119,26 +123,26 @@ describe("hidden trips", () => {
   let publishedInHidden: Entry;
 
   beforeEach(() => {
-    publishedInHidden = mustCreateEntry(cast.publisher, hiddenTrip, "publish", { title: "Surprise" });
+    publishedInHidden = mustCreateEntry(tripOwner, hiddenTrip, "publish", { title: "Surprise" });
   });
 
-  it("hide all their entries, even published, from visitors and regular users", () => {
-    for (const actor of [null, cast.guest]) {
+  it("hide all their entries, even published, from everyone but their creator and the superuser", () => {
+    for (const actor of [null, cast.guest, cast.publisher, cast.otherPublisher, cast.manager]) {
       expect(titles(actor, hiddenTrip)).toEqual([]);
       expect(getEntry(db, actor, hiddenTrip, publishedInHidden.id)).toBeNull();
     }
   });
 
-  it("show their published entries to the superuser and users with Publier", () => {
-    for (const actor of [cast.superuser, cast.publisher, cast.otherPublisher]) {
+  it("show their published entries to the creator of the trip and the superuser", () => {
+    for (const actor of [cast.superuser, tripOwner]) {
       expect(titles(actor, hiddenTrip)).toEqual(["Surprise"]);
       expect(getEntry(db, actor, hiddenTrip, publishedInHidden.id)).not.toBeNull();
     }
   });
 
   it("reveal every published entry at once when the trip becomes visible, but not drafts", () => {
-    mustCreateEntry(cast.publisher, hiddenTrip, "publish", { title: "Deuxième", date: "2026-11-12" });
-    mustCreateEntry(cast.publisher, hiddenTrip, "save", { title: "Brouillon", date: "2026-11-13" });
+    mustCreateEntry(tripOwner, hiddenTrip, "publish", { title: "Deuxième", date: "2026-11-12" });
+    mustCreateEntry(tripOwner, hiddenTrip, "save", { title: "Brouillon", date: "2026-11-13" });
 
     const revealed = updateTrip(db, cast.superuser, hiddenTrip.id, tripInput({ title: "Caché", isVisible: true }));
     if (!revealed.ok) throw new Error(revealed.reason);
@@ -147,8 +151,23 @@ describe("hidden trips", () => {
     expect(titles(cast.guest, revealed.trip)).toEqual(["Deuxième", "Surprise"]);
   });
 
+  it("hide a publisher's own entries when the trip they wrote in is hidden afterwards", () => {
+    const entry = mustCreateEntry(cast.publisher, visibleTrip, "publish", { title: "Écrite avant" });
+    const hidden = updateTrip(db, cast.superuser, visibleTrip.id, tripInput({ title: "Visible", isVisible: false }));
+    if (!hidden.ok) throw new Error(hidden.reason);
+
+    expect(getEntry(db, cast.publisher, hidden.trip, entry.id)).toBeNull();
+    expect(titles(cast.publisher, hidden.trip)).toEqual([]);
+    expect(updateEntry(db, cast.publisher, entry.id, entryInput(), "save")).toEqual({ ok: false, reason: "not_found" });
+    expect(deleteEntry(db, cast.publisher, entry.id)).toEqual({ ok: false, reason: "not_found" });
+    expect(getEntry(db, cast.superuser, hidden.trip, entry.id)).not.toBeNull();
+
+    const shown = updateTrip(db, cast.superuser, visibleTrip.id, tripInput({ title: "Visible", isVisible: true }));
+    expect(shown.ok && getEntry(db, cast.publisher, shown.trip, entry.id)).not.toBeNull();
+  });
+
   it("refuse writes from people who cannot see them, without revealing they exist", () => {
-    for (const actor of [null, cast.guest]) {
+    for (const actor of [null, cast.guest, cast.publisher]) {
       expect(createEntry(db, actor, hiddenTrip.id, entryInput(), "save")).toEqual({ ok: false, reason: "not_found" });
       expect(updateEntry(db, actor, publishedInHidden.id, entryInput(), "save")).toEqual({ ok: false, reason: "not_found" });
       expect(deleteEntry(db, actor, publishedInHidden.id)).toEqual({ ok: false, reason: "not_found" });
@@ -280,7 +299,7 @@ describe("identified people", () => {
     expect(listTaggableUsers(db, null)).toEqual([]);
     expect(listTaggableUsers(db, cast.guest)).toEqual([]);
     const names = listTaggableUsers(db, cast.publisher).map((person) => person.displayName);
-    expect(names).toEqual(["admin", "lucie", "marie", "paul", "romane"]);
+    expect(names).toEqual(["admin", "chloe", "lucie", "marie", "paul", "romane"]);
     // Only the id and the display name are exposed.
     expect(Object.keys(listTaggableUsers(db, cast.superuser)[0] ?? {})).toEqual(["id", "displayName"]);
   });

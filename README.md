@@ -68,10 +68,12 @@ En local : `http://localhost:3000/access/` suivi de la valeur de `ACCESS_TOKEN` 
 
 ### Voyages
 
-- Le superuser et les comptes ayant la permission **Gérer les voyages** créent et modifient les voyages (bouton « Nouveau voyage » sur l'accueil, « Modifier le voyage » sur la page du voyage). Cette permission porte sur tous les voyages, pas seulement ceux que l'on a créés.
-- Un voyage est créé **non visible** par défaut. Tant qu'il l'est, lui et toutes ses entrées (même publiées) n'existent que pour le superuser et les comptes ayant la permission Publier ou Gérer les voyages : pour tous les autres, ses adresses répondent 404, comme si le voyage n'existait pas.
+- Le superuser et les comptes ayant la permission **Gérer les voyages** peuvent créer des voyages (bouton « Nouveau voyage » sur l'accueil). Le compte qui crée un voyage en est l'auteur.
+- Seuls **l'auteur du voyage et le superuser** peuvent le modifier, changer sa visibilité ou le supprimer (« Modifier le voyage » sur la page du voyage). Si la permission Gérer les voyages est retirée à l'auteur, il ne peut plus agir sur ses voyages.
+- Un voyage est créé **non visible** par défaut. Tant qu'il l'est, lui et toutes ses entrées (même publiées) n'existent que pour son auteur et le superuser : pour tous les autres, ses adresses répondent 404, comme si le voyage n'existait pas. Cela vaut aussi pour quelqu'un qui y avait écrit une entrée avant que le voyage ne soit masqué.
 - Cocher « Voyage visible » le révèle d'un coup avec toutes ses entrées publiées.
-- Suppression (en bas de « Modifier le voyage ») : un voyage vide peut être supprimé par qui gère les voyages. Un voyage qui contient des entrées ne peut être supprimé que par le superuser, avec toutes ses entrées, leurs commentaires et leurs réactions.
+- Suppression (en bas de « Modifier le voyage ») : le voyage est supprimé avec toutes ses entrées, y compris celles écrites par d'autres personnes, leurs commentaires et leurs réactions.
+- Si le compte de l'auteur est supprimé, le voyage reste et seul le superuser peut le gérer.
 - L'adresse d'un voyage est construite à partir de son titre à la création et ne change plus ensuite.
 
 ### Entrées
@@ -102,23 +104,24 @@ Le compte superuser ne peut être ni désactivé, ni supprimé, ni réinitialis�
 
 Toutes les règles sont dans un seul fichier, `src/server/permissions.ts`, appelé par les services côté serveur. L'interface ne fait que masquer ce qui serait refusé de toute façon.
 
-| | Visiteur (lien seul) | User | User + Publier | User + Gérer les voyages | Superuser |
-|---|---|---|---|---|---|
-| Voir un voyage visible et ses entrées publiées | oui | oui | oui | oui | oui |
-| Voir un voyage non visible | non | non | oui | oui | oui |
-| Voir un brouillon | non | les siens | les siens | les siens | oui |
-| Créer une entrée | non | non | oui | non | oui |
-| Modifier ou supprimer une entrée | non | non | les siennes | non | oui |
-| Voir les commentaires et réactions | non | oui | oui | oui | oui |
-| Commenter | non | si Commenter | si Commenter | si Commenter | oui |
-| Modifier ou supprimer un commentaire | non | les siens | les siens | les siens | oui |
-| Réagir | non | si Réagir | si Réagir | si Réagir | oui |
-| Créer ou modifier un voyage, changer sa visibilité | non | non | non | oui | oui |
-| Supprimer un voyage vide | non | non | non | oui | oui |
-| Supprimer un voyage avec ses entrées | non | non | non | non | oui |
-| Gérer les comptes | non | non | non | non | oui |
+| | Visiteur (lien seul) | User | Superuser |
+|---|---|---|---|
+| Voir un voyage visible et ses entrées publiées | oui | oui | oui |
+| Voir un voyage non visible et ses entrées | non | l'auteur du voyage | oui |
+| Voir un brouillon | non | son auteur | oui |
+| Créer une entrée | non | si Publier | oui |
+| Modifier ou supprimer une entrée | non | les siennes, si Publier | oui |
+| Voir les commentaires et réactions | non | oui | oui |
+| Commenter | non | si Commenter | oui |
+| Modifier ou supprimer un commentaire | non | les siens, si Commenter | oui |
+| Réagir | non | si Réagir | oui |
+| Créer un voyage | non | si Gérer les voyages | oui |
+| Modifier, masquer ou supprimer un voyage | non | les siens, si Gérer les voyages | oui |
+| Gérer les comptes | non | non | oui |
 
-Les quatre permissions sont indépendantes : un compte peut avoir à la fois Publier et Gérer les voyages. Un compte désactivé, ou qui doit d'abord changer son mot de passe, n'a pas plus de droits qu'un visiteur.
+Tout ce qui concerne les entrées, commentaires et réactions ne vaut que dans les voyages que la personne peut voir.
+
+Les quatre permissions sont indépendantes. Pour préparer un voyage masqué et y écrire, un compte a besoin de Gérer les voyages (pour le créer) et de Publier (pour y écrire). Un compte désactivé, ou qui doit d'abord changer son mot de passe, n'a pas plus de droits qu'un visiteur.
 
 ## Comptes et sécurité
 
