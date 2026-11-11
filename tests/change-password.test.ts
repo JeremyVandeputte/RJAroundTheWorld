@@ -108,6 +108,16 @@ describe("password reset by an administrator", () => {
     expect(loggedIn.ok && loggedIn.user.mustChangePassword).toBe(true);
   });
 
+  it("lifts a login block caused by failed attempts", async () => {
+    for (let i = 0; i < 5; i++) await login(db, env, { username: "alice", password: `bad-guess-${i}`, ip: null });
+    expect(await login(db, env, { username: "alice", password: GOOD_PASSWORD, ip: null })).toMatchObject({
+      reason: "rate_limited",
+    });
+
+    await setUserPassword(db, userId, OTHER_GOOD_PASSWORD, { mustChangePassword: false });
+    expect((await login(db, env, { username: "alice", password: OTHER_GOOD_PASSWORD, ip: null })).ok).toBe(true);
+  });
+
   it("applies the password rules and reports unknown users", async () => {
     expect(await setUserPassword(db, userId, "password123", { mustChangePassword: true })).toEqual({
       ok: false,

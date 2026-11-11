@@ -1,3 +1,4 @@
+import { randomInt } from "node:crypto";
 import { hash, verify } from "@node-rs/argon2";
 import { ZxcvbnFactory } from "@zxcvbn-ts/core";
 import * as commonPackage from "@zxcvbn-ts/language-common";
@@ -30,6 +31,20 @@ let dummyHash: Promise<string> | undefined;
 export function getDummyPasswordHash(): Promise<string> {
   dummyHash ??= hashPassword("dummy-password-for-timing");
   return dummyHash;
+}
+
+// No look-alike characters (0/O, 1/l/I): the password is read and typed by hand.
+const TEMPORARY_PASSWORD_ALPHABET = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+/** Random one-time password such as "kT7m-Wq3x-9pRd-h4Zn" (about 92 bits). */
+export function generateTemporaryPassword(): string {
+  const groups = Array.from({ length: 4 }, () =>
+    Array.from(
+      { length: 4 },
+      () => TEMPORARY_PASSWORD_ALPHABET[randomInt(TEMPORARY_PASSWORD_ALPHABET.length)],
+    ).join(""),
+  );
+  return groups.join("-");
 }
 
 let estimator: ZxcvbnFactory | undefined;

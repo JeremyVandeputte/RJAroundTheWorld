@@ -2,7 +2,7 @@
 
 Journal de voyage privé (nom technique : `rjaroundtheworld`). Le site n'est accessible que par un lien secret et n'est jamais indexé par les moteurs de recherche.
 
-> **État du projet** : Phase 1 en cours. Étapes terminées : 1 (socle) et 2 (lien secret, connexion, sessions, profil). Ce README est complété à chaque étape.
+> **État du projet** : Phase 1 en cours. Étapes terminées : 1 (socle), 2 (lien secret, connexion, sessions, profil) et 3 (administration des comptes, permissions). Ce README est complété à chaque étape.
 
 ## Prérequis
 
@@ -64,9 +64,43 @@ En local : `http://localhost:3000/access/` suivi de la valeur de `ACCESS_TOKEN` 
 - Sans ce cookie, toutes les adresses (pages, connexion, fichiers) renvoient la même réponse 404 neutre. Seul `robots.txt` reste public.
 - Le lien est fixe. En cas de fuite, changer `ACCESS_TOKEN` dans la configuration puis redémarrer : l'ancien lien et tous les cookies d'accès cessent de fonctionner, et il faut transmettre le nouveau lien à tout le monde.
 
+## Administration
+
+La page « Administration » (lien dans l'en-tête, visible du superuser uniquement) permet de :
+
+- **créer un compte** : identifiant, nom affiché et permissions. Un mot de passe temporaire est généré et affiché une seule fois ; la personne doit choisir le sien dès sa première connexion ;
+- **régler les permissions** de chaque compte, une par une : Commenter et Réagir (activées par défaut), Publier (désactivée par défaut) ;
+- **réinitialiser un mot de passe oublié** : nouveau mot de passe temporaire affiché une seule fois, sessions du compte fermées, blocage de connexion levé ;
+- **forcer un changement de mot de passe** sans toucher au mot de passe actuel ;
+- **désactiver ou réactiver** un compte : un compte désactivé est déconnecté partout et ne peut plus se connecter ;
+- **supprimer** un compte : ses commentaires et réactions sont supprimés (un commentaire qui a des réponses est remplacé par « commentaire supprimé »). Un compte qui a écrit des entrées ne peut pas être supprimé : il faut le désactiver ;
+- **retrouver le lien secret** pour le copier.
+
+Le compte superuser ne peut être ni désactivé, ni supprimé, ni réinitialisé depuis cette page : son mot de passe se gère dans « Mon profil » ou avec `npm run create-superuser`.
+
+### Permissions
+
+Toutes les règles sont dans un seul fichier, `src/server/permissions.ts`, appelé par les services côté serveur. L'interface ne fait que masquer ce qui serait refusé de toute façon.
+
+| | Visiteur (lien seul) | User | User + Publier | Superuser |
+|---|---|---|---|---|
+| Voir un voyage visible et ses entrées publiées | oui | oui | oui | oui |
+| Voir un voyage non visible | non | non | oui | oui |
+| Voir un brouillon | non | les siens | les siens | oui |
+| Créer une entrée | non | non | oui | oui |
+| Modifier ou supprimer une entrée | non | non | les siennes | oui |
+| Voir les commentaires et réactions | non | oui | oui | oui |
+| Commenter | non | si Commenter | si Commenter | oui |
+| Modifier ou supprimer un commentaire | non | les siens | les siens | oui |
+| Réagir | non | si Réagir | si Réagir | oui |
+| Gérer les comptes et les voyages | non | non | non | oui |
+
+Un compte désactivé, ou qui doit d'abord changer son mot de passe, n'a pas plus de droits qu'un visiteur.
+
 ## Comptes et sécurité
 
-- Pas d'inscription libre : seuls le script ci-dessus et (à partir de l'étape 3) la page d'administration créent des comptes.
+- Pas d'inscription libre : seuls le script `create-superuser` et la page d'administration créent des comptes.
+- Un mot de passe temporaire n'est jamais stocké en clair : seul son hachage est enregistré.
 - Mots de passe hachés avec argon2id. La vérification des mots de passe trop courants est locale (aucun appel externe).
 - Sessions par cookie `httpOnly`, `sameSite=lax`, et `Secure` dès que `APP_URL` est en `https`. Une session expire après `SESSION_DAYS` jours sans visite.
 - Changer son mot de passe (page « Mon profil ») ferme toutes les autres sessions du compte.
@@ -125,6 +159,7 @@ src/proxy.ts        contrôle d'accès appliqué à toutes les requêtes
 src/server/actions/ actions de formulaire (couche fine)
 src/server/auth/    lien secret, sessions, mots de passe, anti brute force
 src/server/db/      schéma et connexion à la base
+src/server/permissions.ts  matrice de permissions (source unique)
 src/server/services/ logique métier, couverte par les tests
 tests/              tests automatisés
 ```

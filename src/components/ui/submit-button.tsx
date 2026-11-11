@@ -6,12 +6,13 @@ import { useFormStatus } from "react-dom";
 type SubmitButtonProps = {
   children: ReactNode;
   pendingLabel?: string;
-  variant?: "primary" | "secondary";
+  variant?: "primary" | "secondary" | "danger";
 };
 
 const variants = {
   primary: "bg-accent text-white hover:bg-accent/90",
   secondary: "border border-line bg-white text-ink hover:bg-paper",
+  danger: "bg-red-700 text-white hover:bg-red-800",
 };
 
 /** Submit button that disables itself while its form is being sent. */

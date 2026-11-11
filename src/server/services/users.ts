@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { checkPasswordPolicy, hashPassword, type PasswordIssue } from "@/server/auth/password";
+import { clearFailedLogins } from "@/server/auth/rate-limit";
 import { deleteUserSessions, toSessionUser, type SessionUser } from "@/server/auth/sessions";
 import type { Db } from "@/server/db/client";
 import { users, type UserRole } from "@/server/db/schema";
@@ -64,7 +65,29 @@ export async function createUser(db: Db, input: CreateUserInput): Promise<Create
 export type SetPasswordResult = { ok: true } | { ok: false; reason: PasswordIssue | "user_not_found" };
 
 /**
- * Replaces a user's password and logs them out everywhere.
+ * Stores a new password for a reset: logs the user out everywhere and lifts
+ * any login block, so the new password can be used right away.
+ */
+export async function applyPasswordReset(
+  db: Db,
+  user: { id: number; username: string },
+  password: string,
+  options: { mustChangePassword: boolean },
+): Promise<void> {
+  const passwordHash = await hashPassword(password);
+  db.transaction((tx) => {
+    const txDb = tx as unknown as Db;
+    tx.update(users)
+      .set({ passwordHash, mustChangePassword: options.mustChangePassword })
+      .where(eq(users.id, user.id))
+      .run();
+    deleteUserSessions(txDb, user.id);
+    clearFailedLogins(txDb, user.username);
+  });
+}
+
+/**
+ * Replaces a user's password with a chosen one (checked against the rules).
  * Used for resets: the user does not need to know the current password.
  */
 export async function setUserPassword(
@@ -79,13 +102,6 @@ export async function setUserPassword(
   const passwordIssue = checkPasswordPolicy(password, [user.username, user.displayName]);
   if (passwordIssue) return { ok: false, reason: passwordIssue };
 
-  const passwordHash = await hashPassword(password);
-  db.transaction((tx) => {
-    tx.update(users)
-      .set({ passwordHash, mustChangePassword: options.mustChangePassword })
-      .where(eq(users.id, userId))
-      .run();
-    deleteUserSessions(tx as unknown as Db, userId);
-  });
+  await applyPasswordReset(db, user, password, options);
   return { ok: true };
 }

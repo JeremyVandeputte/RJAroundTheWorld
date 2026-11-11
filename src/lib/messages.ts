@@ -29,4 +29,16 @@ export const messages = {
     invalid_display_name: "Le nom affiché doit contenir entre 1 et 50 caractères.",
     user_not_found: "Ce compte n'existe pas.",
   },
+  admin: {
+    forbidden: "Cette action est réservée à l'administrateur.",
+    cannot_target_superuser: "Cette action n'est pas possible sur le compte administrateur.",
+    has_entries:
+      "Ce compte a écrit des entrées du journal : il ne peut pas être supprimé. Désactivez-le à la place.",
+    permissions_saved: "Permissions enregistrées.",
+    account_deactivated: "Compte désactivé. Ses sessions ont été fermées.",
+    account_reactivated: "Compte réactivé.",
+    change_forced: "Ce compte devra choisir un nouveau mot de passe avant de continuer.",
+    account_created: (username: string) => `Compte « ${username} » créé.`,
+    password_reset: "Mot de passe réinitialisé. Les sessions de ce compte ont été fermées.",
+  },
 } as const;
