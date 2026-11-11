@@ -39,6 +39,11 @@ export function CreateUserForm() {
         <CheckboxField label="Commenter" name="canComment" defaultChecked />
         <CheckboxField label="Réagir" name="canReact" defaultChecked />
         <CheckboxField label="Publier" name="canPublish" hint="Écrire des entrées et voir les voyages non visibles." />
+        <CheckboxField
+          label="Gérer les voyages"
+          name="canManageTrips"
+          hint="Créer, modifier et supprimer des voyages, changer leur visibilité."
+        />
       </fieldset>
       <FormMessage state={state} />
       {state.temporaryPassword ? <TemporaryPassword value={state.temporaryPassword} /> : null}

@@ -16,13 +16,14 @@ export function insertUser(db: Db, username: string, overrides: UserOverrides = 
   return user;
 }
 
-/** The usual cast: a superuser, a publisher, another publisher, a guest. */
+/** The usual cast: a superuser, two publishers, a guest and a trip manager. */
 export function insertCast(db: Db) {
   return {
     superuser: insertUser(db, "admin", { role: "superuser", canPublish: true }),
     publisher: insertUser(db, "romane", { canPublish: true }),
     otherPublisher: insertUser(db, "paul", { canPublish: true }),
     guest: insertUser(db, "marie"),
+    manager: insertUser(db, "lucie", { canManageTrips: true }),
   };
 }
 

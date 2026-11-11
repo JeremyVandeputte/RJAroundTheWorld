@@ -1,0 +1,1 @@
+ALTER TABLE `users` ADD `can_manage_trips` integer DEFAULT false NOT NULL;

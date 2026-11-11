@@ -13,7 +13,12 @@ type Refused<Reason extends string> = { ok: false; reason: Reason };
 type Forbidden = Refused<"forbidden">;
 type TargetIssue = "forbidden" | "user_not_found" | "cannot_target_superuser";
 
-export type UserPermissions = { canPublish: boolean; canComment: boolean; canReact: boolean };
+export type UserPermissions = {
+  canPublish: boolean;
+  canComment: boolean;
+  canReact: boolean;
+  canManageTrips: boolean;
+};
 
 export function listUsers(db: Db, actor: Actor): { ok: true; users: SessionUser[] } | Forbidden {
   if (!canManageUsers(actor)) return { ok: false, reason: "forbidden" };
@@ -67,6 +72,7 @@ export async function adminCreateUser(db: Db, actor: Actor, input: AdminCreateUs
     canPublish: input.canPublish,
     canComment: input.canComment,
     canReact: input.canReact,
+    canManageTrips: input.canManageTrips,
     mustChangePassword: true,
   });
   return result.ok ? { ok: true, user: result.user, temporaryPassword } : result;
@@ -85,6 +91,7 @@ export function updateUserPermissions(
       canPublish: permissions.canPublish,
       canComment: permissions.canComment,
       canReact: permissions.canReact,
+      canManageTrips: permissions.canManageTrips,
     })
     .where(eq(users.id, userId))
     .run();

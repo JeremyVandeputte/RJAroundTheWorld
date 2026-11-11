@@ -12,6 +12,7 @@ import {
   resetUserPassword,
   setUserActive,
   updateUserPermissions,
+  type UserPermissions,
 } from "@/server/services/admin";
 import { formBoolean, formId, formString, type FormState } from "./form-state";
 
@@ -29,15 +30,22 @@ function refreshAdminPages(): void {
   revalidatePath("/", "layout");
 }
 
+function readPermissions(formData: FormData): UserPermissions {
+  return {
+    canPublish: formBoolean(formData, "canPublish"),
+    canComment: formBoolean(formData, "canComment"),
+    canReact: formBoolean(formData, "canReact"),
+    canManageTrips: formBoolean(formData, "canManageTrips"),
+  };
+}
+
 export async function createUserAction(_previous: FormState, formData: FormData): Promise<FormState> {
   const username = formString(formData, "username");
   const displayName = formString(formData, "displayName");
   const result = await adminCreateUser(getDb(), await getCurrentUser(), {
     username,
     displayName,
-    canPublish: formBoolean(formData, "canPublish"),
-    canComment: formBoolean(formData, "canComment"),
-    canReact: formBoolean(formData, "canReact"),
+    ...readPermissions(formData),
   });
   if (!result.ok) return { error: describe(result.reason), values: { username, displayName } };
 
@@ -51,11 +59,7 @@ export async function createUserAction(_previous: FormState, formData: FormData)
 export async function updatePermissionsAction(_previous: FormState, formData: FormData): Promise<FormState> {
   const userId = formId(formData, "userId");
   if (userId === null) return { error: messages.user.user_not_found };
-  const result = updateUserPermissions(getDb(), await getCurrentUser(), userId, {
-    canPublish: formBoolean(formData, "canPublish"),
-    canComment: formBoolean(formData, "canComment"),
-    canReact: formBoolean(formData, "canReact"),
-  });
+  const result = updateUserPermissions(getDb(), await getCurrentUser(), userId, readPermissions(formData));
   if (!result.ok) return { error: describe(result.reason) };
   refreshAdminPages();
   return { success: messages.admin.permissions_saved };

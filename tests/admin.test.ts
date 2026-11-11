@@ -19,7 +19,7 @@ import { createTestDb } from "./helpers/test-db";
 import { GOOD_PASSWORD, testEnv } from "./helpers/test-env";
 
 const env = testEnv();
-const defaults = { canPublish: false, canComment: true, canReact: true };
+const defaults = { canPublish: false, canComment: true, canReact: true, canManageTrips: false };
 
 let db: Db;
 let superuser: SessionUser;
@@ -68,7 +68,7 @@ describe("access to administration", () => {
   });
 
   it("lets a user with every permission do nothing more: only the role counts", () => {
-    const powerUser = { ...paul, canPublish: true, canComment: true, canReact: true };
+    const powerUser = { ...paul, canPublish: true, canComment: true, canReact: true, canManageTrips: true };
     expect(listUsers(db, powerUser).ok).toBe(false);
   });
 
@@ -138,15 +138,21 @@ describe("creating an account", () => {
 
 describe("permissions", () => {
   it("can be switched one by one", () => {
-    expect(updateUserPermissions(db, superuser, marie.id, { canPublish: true, canComment: false, canReact: true })).toEqual(
-      { ok: true },
-    );
-    expect(stored(marie.id)).toMatchObject({ canPublish: true, canComment: false, canReact: true });
+    const chosen = { canPublish: true, canComment: false, canReact: true, canManageTrips: true };
+    expect(updateUserPermissions(db, superuser, marie.id, chosen)).toEqual({ ok: true });
+    expect(stored(marie.id)).toMatchObject(chosen);
+    expect(updateUserPermissions(db, superuser, marie.id, { ...chosen, canManageTrips: false })).toEqual({ ok: true });
+    expect(stored(marie.id)).toMatchObject({ canPublish: true, canManageTrips: false });
   });
 
   it("take effect immediately on existing sessions", () => {
     const { token } = createSession(db, marie.id, env);
-    updateUserPermissions(db, superuser, marie.id, { canPublish: false, canComment: false, canReact: false });
+    updateUserPermissions(db, superuser, marie.id, {
+      canPublish: false,
+      canComment: false,
+      canReact: false,
+      canManageTrips: false,
+    });
     expect(getSessionUser(db, token, env)).toMatchObject({ canComment: false, canReact: false });
   });
 });

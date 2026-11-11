@@ -12,9 +12,10 @@ type PermissionsFormProps = {
   canPublish: boolean;
   canComment: boolean;
   canReact: boolean;
+  canManageTrips: boolean;
 };
 
-export function PermissionsForm({ userId, canPublish, canComment, canReact }: PermissionsFormProps) {
+export function PermissionsForm({ userId, canPublish, canComment, canReact, canManageTrips }: PermissionsFormProps) {
   const [state, formAction] = useActionState(updatePermissionsAction, emptyFormState);
   return (
     <form action={formAction} className="space-y-3">
@@ -27,6 +28,12 @@ export function PermissionsForm({ userId, canPublish, canComment, canReact }: Pe
           name="canPublish"
           defaultChecked={canPublish}
           hint="Écrire des entrées et voir les voyages non visibles."
+        />
+        <CheckboxField
+          label="Gérer les voyages"
+          name="canManageTrips"
+          defaultChecked={canManageTrips}
+          hint="Créer, modifier et supprimer des voyages, changer leur visibilité."
         />
       </div>
       <FormMessage state={state} />

@@ -24,6 +24,7 @@ export function permissionSummary(user: SessionUser): string {
     user.canPublish ? "Publier" : null,
     user.canComment ? "Commenter" : null,
     user.canReact ? "Réagir" : null,
+    user.canManageTrips ? "Gérer les voyages" : null,
   ].filter(Boolean);
   return granted.length > 0 ? granted.join(", ") : "Lecture seule";
 }

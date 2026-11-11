@@ -120,6 +120,7 @@ async function main() {
     canPublish: true,
     canComment: true,
     canReact: true,
+    canManageTrips: true,
   });
   if (!result.ok) fail(describe(result.reason));
   console.log(`\nSuperuser créé : ${result.user.username} (${result.user.displayName}).`);

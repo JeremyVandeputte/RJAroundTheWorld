@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { messages } from "@/lib/messages";
 import { getCurrentUser } from "@/server/auth/current-user";
 import { getDb } from "@/server/db/client";
-import { createTrip, updateTrip, type TripInput } from "@/server/services/trips";
+import { createTrip, deleteTrip, updateTrip, type TripInput } from "@/server/services/trips";
 import { formBoolean, formId, formString, type FormState } from "./form-state";
 
 function readTripInput(formData: FormData): TripInput {
@@ -31,4 +31,14 @@ export async function saveTripAction(_previous: FormState, formData: FormData): 
 
   revalidatePath("/", "layout");
   redirect(`/trips/${result.trip.slug}`);
+}
+
+export async function deleteTripAction(_previous: FormState, formData: FormData): Promise<FormState> {
+  const tripId = formId(formData, "tripId");
+  if (tripId === null) return { error: messages.trip.trip_not_found };
+  const result = deleteTrip(getDb(), await getCurrentUser(), tripId);
+  if (!result.ok) return { error: messages.trip[result.reason] };
+
+  revalidatePath("/", "layout");
+  redirect("/");
 }

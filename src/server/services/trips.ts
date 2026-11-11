@@ -1,9 +1,9 @@
-import { desc, eq } from "drizzle-orm";
+import { count, desc, eq } from "drizzle-orm";
 import { isValidDateString } from "@/lib/dates";
 import { slugify } from "@/lib/slug";
 import type { Db } from "@/server/db/client";
-import { trips } from "@/server/db/schema";
-import { canManageTrips, canViewTrip, type Actor } from "@/server/permissions";
+import { entries, trips } from "@/server/db/schema";
+import { canDeleteTrip, canManageTrips, canViewTrip, type Actor } from "@/server/permissions";
 
 export type Trip = typeof trips.$inferSelect;
 
@@ -103,4 +103,31 @@ export function updateTrip(db: Db, actor: Actor, tripId: number, input: TripInpu
     .returning()
     .get();
   return trip ? { ok: true, trip } : { ok: false, reason: "trip_not_found" };
+}
+
+/** Number of entries of a trip, drafts included (used before deleting it). */
+export function countTripEntries(db: Db, tripId: number): number {
+  return db.select({ total: count() }).from(entries).where(eq(entries.tripId, tripId)).get()?.total ?? 0;
+}
+
+export type DeleteTripResult = { ok: true } | { ok: false; reason: "forbidden" | "trip_not_found" | "trip_has_entries" };
+
+/**
+ * Deletes a trip. A trip that still has entries can only be deleted by the
+ * superuser, together with all its entries, comments and reactions.
+ */
+export function deleteTrip(db: Db, actor: Actor, tripId: number): DeleteTripResult {
+  const trip = db.select().from(trips).where(eq(trips.id, tripId)).get();
+  if (!trip || !canViewTrip(actor, trip)) return { ok: false, reason: "trip_not_found" };
+  if (!canManageTrips(actor)) return { ok: false, reason: "forbidden" };
+  if (!canDeleteTrip(actor, { hasEntries: countTripEntries(db, tripId) > 0 })) {
+    return { ok: false, reason: "trip_has_entries" };
+  }
+
+  db.transaction((tx) => {
+    // Comments, reactions, notifications and tags go with their entry.
+    tx.delete(entries).where(eq(entries.tripId, tripId)).run();
+    tx.delete(trips).where(eq(trips.id, tripId)).run();
+  });
+  return { ok: true };
 }

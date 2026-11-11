@@ -45,6 +45,8 @@ export const users = sqliteTable("users", {
   canPublish: integer("can_publish", { mode: "boolean" }).notNull().default(false),
   canComment: integer("can_comment", { mode: "boolean" }).notNull().default(true),
   canReact: integer("can_react", { mode: "boolean" }).notNull().default(true),
+  /** Create, edit and delete trips, and change their visibility. */
+  canManageTrips: integer("can_manage_trips", { mode: "boolean" }).notNull().default(false),
   mustChangePassword: integer("must_change_password", { mode: "boolean" }).notNull().default(false),
   isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
   createdAt: createdAt(),

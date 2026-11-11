@@ -53,6 +53,7 @@ export default async function AdminUserPage({ params }: { params: Promise<{ user
                 canPublish={user.canPublish}
                 canComment={user.canComment}
                 canReact={user.canReact}
+                canManageTrips={user.canManageTrips}
               />
             </div>
           </section>

@@ -19,6 +19,7 @@ export type CreateUserInput = {
   canPublish?: boolean;
   canComment?: boolean;
   canReact?: boolean;
+  canManageTrips?: boolean;
   mustChangePassword?: boolean;
 };
 
@@ -55,6 +56,7 @@ export async function createUser(db: Db, input: CreateUserInput): Promise<Create
       canPublish: input.canPublish,
       canComment: input.canComment,
       canReact: input.canReact,
+      canManageTrips: input.canManageTrips,
       mustChangePassword: input.mustChangePassword ?? false,
     })
     .returning()

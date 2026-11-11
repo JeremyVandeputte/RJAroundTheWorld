@@ -280,7 +280,7 @@ describe("identified people", () => {
     expect(listTaggableUsers(db, null)).toEqual([]);
     expect(listTaggableUsers(db, cast.guest)).toEqual([]);
     const names = listTaggableUsers(db, cast.publisher).map((person) => person.displayName);
-    expect(names).toEqual(["admin", "marie", "paul", "romane"]);
+    expect(names).toEqual(["admin", "lucie", "marie", "paul", "romane"]);
     // Only the id and the display name are exposed.
     expect(Object.keys(listTaggableUsers(db, cast.superuser)[0] ?? {})).toEqual(["id", "displayName"]);
   });
