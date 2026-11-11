@@ -29,6 +29,26 @@ export const messages = {
     invalid_display_name: "Le nom affiché doit contenir entre 1 et 50 caractères.",
     user_not_found: "Ce compte n'existe pas.",
   },
+  trip: {
+    forbidden: "Seul l'administrateur peut créer ou modifier un voyage.",
+    trip_not_found: "Ce voyage n'existe pas.",
+    invalid_title: "Le titre du voyage doit contenir entre 1 et 100 caractères.",
+    invalid_description: "La description ne doit pas dépasser 500 caractères.",
+    invalid_dates: "Indiquez une date de début et une date de fin valides.",
+    end_before_start: "La date de fin ne peut pas précéder la date de début.",
+  },
+  entry: {
+    forbidden: "Vous n'avez pas le droit de modifier cette entrée.",
+    not_found: "Cette entrée n'existe pas.",
+    invalid_date: "Indiquez une date valide.",
+    invalid_title: "Le titre doit contenir entre 1 et 150 caractères.",
+    body_too_long: "Le texte est trop long (20 000 caractères au maximum).",
+    invalid_point:
+      "Les coordonnées d'un lieu sont invalides : latitude entre -90 et 90, longitude entre -180 et 180, nom de 100 caractères au maximum.",
+    point_b_requires_a: "Indiquez d'abord le point A avant le point B.",
+    location_required: "Un lieu (point A) est nécessaire pour qu'une entrée soit publiée.",
+    invalid_people: "Une des personnes identifiées n'existe pas.",
+  },
   admin: {
     forbidden: "Cette action est réservée à l'administrateur.",
     cannot_target_superuser: "Cette action n'est pas possible sur le compte administrateur.",

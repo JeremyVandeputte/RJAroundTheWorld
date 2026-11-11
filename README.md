@@ -2,7 +2,7 @@
 
 Journal de voyage privé (nom technique : `rjaroundtheworld`). Le site n'est accessible que par un lien secret et n'est jamais indexé par les moteurs de recherche.
 
-> **État du projet** : Phase 1 en cours. Étapes terminées : 1 (socle), 2 (lien secret, connexion, sessions, profil) et 3 (administration des comptes, permissions). Ce README est complété à chaque étape.
+> **État du projet** : Phase 1 en cours. Étapes terminées : 1 (socle), 2 (lien secret, connexion, sessions, profil), 3 (administration des comptes, permissions) et 4 (voyages et entrées). Restent : médias, carte, commentaires et réactions, notifications. Ce README est complété à chaque étape.
 
 ## Prérequis
 
@@ -63,6 +63,25 @@ En local : `http://localhost:3000/access/` suivi de la valeur de `ACCESS_TOKEN` 
 - Le lien dépose un cookie d'accès valable 400 jours, puis redirige vers l'accueil : le token ne reste pas dans la barre d'adresse.
 - Sans ce cookie, toutes les adresses (pages, connexion, fichiers) renvoient la même réponse 404 neutre. Seul `robots.txt` reste public.
 - Le lien est fixe. En cas de fuite, changer `ACCESS_TOKEN` dans la configuration puis redémarrer : l'ancien lien et tous les cookies d'accès cessent de fonctionner, et il faut transmettre le nouveau lien à tout le monde.
+
+## Voyages et entrées
+
+### Voyages
+
+- Seul le superuser crée et modifie les voyages (bouton « Nouveau voyage » sur l'accueil, « Modifier le voyage » sur la page du voyage).
+- Un voyage est créé **non visible** par défaut. Tant qu'il l'est, lui et toutes ses entrées (même publiées) n'existent que pour le superuser et les comptes ayant la permission Publier : pour tous les autres, ses adresses répondent 404, comme si le voyage n'existait pas.
+- Cocher « Voyage visible » le révèle d'un coup avec toutes ses entrées publiées.
+- L'adresse d'un voyage est construite à partir de son titre à la création et ne change plus ensuite.
+
+### Entrées
+
+- « Enregistrer le brouillon » crée ou met à jour un brouillon, visible uniquement par son auteur et le superuser. Le lieu est facultatif à ce stade.
+- « Publier » rend l'entrée visible (si son voyage l'est). Un lieu (point A) est alors obligatoire.
+- Une entrée publiée reste publiée quand on la modifie. « Retirer » la repasse en brouillon.
+- Un auteur peut supprimer ses propres entrées ; le superuser peut modifier et supprimer toutes les entrées.
+- Texte : `**gras**` et `[texte du lien](https://…)` uniquement ; une adresse `https://…` collée telle quelle devient aussi un lien. Tout le reste est affiché tel que saisi : aucun HTML n'est interprété, et seuls les liens `http` et `https` sont cliquables.
+- Lieu : un point (lieu fixe) ou deux points A et B (trajet à sens unique), chacun avec un nom facultatif. En attendant la carte (étape 6), les coordonnées se saisissent à la main.
+- Personnes identifiées : n'importe quels comptes actifs du site.
 
 ## Administration
 

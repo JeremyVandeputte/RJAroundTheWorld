@@ -1,16 +1,44 @@
-import { APP_NAME } from "@/lib/app";
+import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
+import { LinkButton } from "@/components/ui/link-button";
+import { formatDateRange } from "@/lib/dates";
 import { getViewer } from "@/server/auth/current-user";
+import { getDb } from "@/server/db/client";
+import { canManageTrips } from "@/server/permissions";
+import { listTrips } from "@/server/services/trips";
 
-// Temporary home page: replaced by the list of trips in a later step.
 export default async function HomePage() {
   const viewer = await getViewer();
+  const trips = listTrips(getDb(), viewer);
+
   return (
-    <>
-      <h1 className="text-2xl font-semibold tracking-tight">{APP_NAME}</h1>
-      <p className="mt-2 text-muted">
-        {viewer ? `Bonjour ${viewer.displayName}. ` : ""}
-        Le journal de voyage est en cours de préparation.
-      </p>
-    </>
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold tracking-tight">Voyages</h1>
+        {canManageTrips(viewer) ? <LinkButton href="/trips/new">Nouveau voyage</LinkButton> : null}
+      </div>
+
+      {trips.length === 0 ? (
+        <p className="text-muted">Aucun voyage pour le moment.</p>
+      ) : (
+        <ul className="space-y-3">
+          {trips.map((trip) => (
+            <li key={trip.id}>
+              <Link
+                href={`/trips/${trip.slug}`}
+                className="block rounded-md border border-line bg-white px-4 py-4 hover:border-accent/50"
+              >
+                <span className="flex flex-wrap items-center gap-2">
+                  <span className="text-lg font-semibold">{trip.title}</span>
+                  {!trip.isVisible ? <Badge tone="warning">Non visible</Badge> : null}
+                </span>
+                <span className="mt-1 block text-sm text-muted">{formatDateRange(trip.startDate, trip.endDate)}</span>
+                {trip.description ? <span className="mt-2 block">{trip.description}</span> : null}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

@@ -7,6 +7,11 @@ type SubmitButtonProps = {
   children: ReactNode;
   pendingLabel?: string;
   variant?: "primary" | "secondary" | "danger";
+  /** Sent with the form when this button is the one clicked. */
+  name?: string;
+  value?: string;
+  /** Overrides the pending state detected from the enclosing form. */
+  pending?: boolean;
 };
 
 const variants = {
@@ -16,15 +21,18 @@ const variants = {
 };
 
 /** Submit button that disables itself while its form is being sent. */
-export function SubmitButton({ children, pendingLabel, variant = "primary" }: SubmitButtonProps) {
-  const { pending } = useFormStatus();
+export function SubmitButton({ children, pendingLabel, variant = "primary", name, value, pending }: SubmitButtonProps) {
+  const status = useFormStatus();
+  const isPending = pending ?? status.pending;
   return (
     <button
       type="submit"
-      disabled={pending}
+      name={name}
+      value={value}
+      disabled={isPending}
       className={`inline-flex min-h-11 items-center justify-center rounded-md px-4 py-2 text-base font-medium transition-colors disabled:opacity-60 ${variants[variant]}`}
     >
-      {pending && pendingLabel ? pendingLabel : children}
+      {isPending && pendingLabel ? pendingLabel : children}
     </button>
   );
 }
