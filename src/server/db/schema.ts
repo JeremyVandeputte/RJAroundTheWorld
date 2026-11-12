@@ -253,8 +253,10 @@ export const notifications = sqliteTable(
       .notNull()
       .references(() => entries.id, { onDelete: "cascade" }),
     commentId: integer("comment_id").references(() => comments.id, { onDelete: "cascade" }),
-    /** For `entry_published`: the recipient is identified in the entry. */
+    /** The recipient is identified in the entry (and is not its author). */
     isTagged: integer("is_tagged", { mode: "boolean" }).notNull().default(false),
+    /** For reaction notifications: the reaction given (kept up to date when it changes). */
+    reactionType: text("reaction_type", { enum: REACTION_TYPES }),
     readAt: integer("read_at", { mode: "timestamp_ms" }),
     createdAt: createdAt(),
   },

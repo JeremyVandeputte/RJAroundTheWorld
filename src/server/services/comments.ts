@@ -3,6 +3,7 @@ import type { Db } from "@/server/db/client";
 import { comments, entries, reactions, trips, users } from "@/server/db/schema";
 import { canComment, canDeleteComment, canEditComment, canViewEntry, canViewSocial, type Actor } from "@/server/permissions";
 import type { Entry } from "./entries";
+import { forgetComment, notifyComment } from "./notifications";
 import type { Trip } from "./trips";
 
 export type Comment = typeof comments.$inferSelect;
@@ -128,17 +129,21 @@ export function addComment(
     if (!repliedTo || repliedTo.deletedAt !== null) return { ok: false, reason: "comment_not_found" };
   }
 
-  const comment = db
-    .insert(comments)
-    .values({
-      entryId,
-      parentId: repliedTo ? (repliedTo.parentId ?? repliedTo.id) : null,
-      authorId: actor.id,
-      body,
-      createdAt: now,
-    })
-    .returning()
-    .get();
+  const comment = db.transaction((tx) => {
+    const created = tx
+      .insert(comments)
+      .values({
+        entryId,
+        parentId: repliedTo ? (repliedTo.parentId ?? repliedTo.id) : null,
+        authorId: actor.id,
+        body,
+        createdAt: now,
+      })
+      .returning()
+      .get();
+    notifyComment(tx as unknown as Db, actor.id, found.trip, found.entry, created, repliedTo, now);
+    return created;
+  });
   return { ok: true, comment, entry: found.entry, trip: found.trip, repliedTo };
 }
 
@@ -190,6 +195,8 @@ export function deleteComment(db: Db, actor: Actor, commentId: number, now = new
     if (comment.parentId === null && replyCount(txDb, comment.id) > 0) {
       tx.update(comments).set({ body: "", deletedAt: now, editedAt: null }).where(eq(comments.id, comment.id)).run();
       tx.delete(reactions).where(eq(reactions.commentId, comment.id)).run();
+      // Its text is gone: so are the notifications about it.
+      forgetComment(txDb, comment.id);
       return;
     }
     tx.delete(comments).where(eq(comments.id, comment.id)).run();

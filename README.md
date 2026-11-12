@@ -2,7 +2,7 @@
 
 Journal de voyage privé (nom technique : `rjaroundtheworld`). Le site n'est accessible que par un lien secret et n'est jamais indexé par les moteurs de recherche.
 
-> **État du projet** : Phase 1 en cours. Étapes terminées : 1 (socle), 2 (lien secret, connexion, sessions, profil), 3 (administration des comptes, permissions), 4 (voyages et entrées), 5 (photos et vidéos), 6 (carte) et 7 (commentaires et réactions). Reste : notifications. Ce README est complété à chaque étape.
+> **État du projet** : Phase 1 en cours. Étapes terminées : 1 (socle), 2 (lien secret, connexion, sessions, profil), 3 (administration des comptes, permissions), 4 (voyages et entrées), 5 (photos et vidéos), 6 (carte), 7 (commentaires et réactions) et 8 (notifications). Reste : l'étape 9 (finitions et relecture). Ce README est complété à chaque étape.
 
 ## Prérequis
 
@@ -111,6 +111,24 @@ Ils se trouvent en bas de la page d'une entrée publiée.
 - Un compte sans Commenter ni Réagir lit les commentaires et les décomptes, sans pouvoir intervenir.
 - Les heures sont affichées dans le fuseau de l'appareil qui consulte.
 
+## Notifications
+
+Une cloche dans l'en-tête indique le nombre de notifications non lues ; elle mène à la page « Notifications ». Il n'y a ni temps réel ni e-mail : les notifications apparaissent au chargement d'une page.
+
+| Événement | Qui est notifié |
+|---|---|
+| Première publication d'une entrée | Toutes les personnes qui peuvent la voir, sauf son auteur ; mention « Vous apparaissez dans cette entrée » pour les personnes identifiées |
+| Commentaire sur une entrée | L'auteur de l'entrée et les personnes identifiées |
+| Réaction à une entrée | L'auteur de l'entrée et les personnes identifiées |
+| Réponse à un commentaire (ou à une réponse) | L'auteur du commentaire auquel on répond |
+| Réaction à un commentaire ou à une réponse | Son auteur |
+
+- **Jamais à soi-même** : la personne qui agit n'est jamais notifiée.
+- **Voyage non visible** : seules les personnes qui y ont accès (son auteur et le superuser) sont notifiées. Une personne identifiée dans une entrée d'un voyage masqué n'est pas notifiée.
+- **Pas de doublon** : retirer puis republier une entrée ne renotifie pas ; changer de réaction met à jour la notification existante ; retirer sa réaction supprime la notification.
+- **Toujours à jour** : une notification disparaît si son objet n'est plus visible (voyage masqué, entrée retirée, commentaire supprimé) et réapparaît s'il le redevient.
+- **Lecture** : toucher une notification mène directement à l'entrée ou au commentaire concerné et la marque comme lue. « Marquer comme lue » et « Tout marquer comme lu » marquent sans quitter la page. Les 100 notifications les plus récentes sont affichées.
+
 ## Connexion instable
 
 Le site est pensé pour être utilisé sur un téléphone avec un réseau irrégulier :
@@ -119,6 +137,7 @@ Le site est pensé pour être utilisé sur un téléphone avec un réseau irrég
 - les envois de photos et vidéos reprennent seuls après une coupure courte, et à la demande après une coupure longue (voir ci-dessous) ;
 - si « Enregistrer » ou « Publier » est utilisé sans réseau, un message s'affiche et le formulaire reste intact : titre, texte, lieu et personnes ne sont pas perdus ;
 - un refus du serveur (lieu manquant, par exemple) laisse aussi le formulaire tel qu'il a été rempli ;
+- si le serveur rencontre une erreur, le message le dit (au lieu de parler de coupure réseau) et invite à recharger la page pour vérifier si l'action a été enregistrée ;
 - ailleurs, une action qui échoue affiche une page « Une erreur est survenue » avec un bouton « Réessayer ».
 
 ## Photos et vidéos

@@ -5,6 +5,7 @@ import { comments, entries, reactions, trips, users } from "@/server/db/schema";
 import { canReact, canViewEntry, canViewSocial, type Actor } from "@/server/permissions";
 import type { Comment } from "./comments";
 import type { Entry } from "./entries";
+import { notifyReaction } from "./notifications";
 import type { Trip } from "./trips";
 
 /** Reactions on one element, as shown to one viewer. */
@@ -105,16 +106,22 @@ export function react(db: Db, actor: Actor, target: ReactionTarget, type: string
   const existing = db.select().from(reactions).where(and(eq(reactions.userId, actor.id), onTarget)).get();
   const base = { ok: true as const, type, entry: found.entry, trip: found.trip, comment };
 
-  if (!existing) {
-    db.insert(reactions)
-      .values({ userId: actor.id, entryId: comment ? null : entryId, commentId: comment?.id ?? null, type, createdAt: now })
-      .run();
-    return { ...base, change: "added" };
-  }
-  if (existing.type === type) {
-    db.delete(reactions).where(eq(reactions.id, existing.id)).run();
-    return { ...base, change: "removed" };
-  }
-  db.update(reactions).set({ type }).where(eq(reactions.id, existing.id)).run();
-  return { ...base, change: "changed" };
+  return db.transaction((tx) => {
+    const txDb = tx as unknown as Db;
+    let change: "added" | "changed" | "removed";
+    if (!existing) {
+      tx.insert(reactions)
+        .values({ userId: actor.id, entryId: comment ? null : entryId, commentId: comment?.id ?? null, type, createdAt: now })
+        .run();
+      change = "added";
+    } else if (existing.type === type) {
+      tx.delete(reactions).where(eq(reactions.id, existing.id)).run();
+      change = "removed";
+    } else {
+      tx.update(reactions).set({ type }).where(eq(reactions.id, existing.id)).run();
+      change = "changed";
+    }
+    notifyReaction(txDb, actor.id, change, type, found.trip, found.entry, comment, now);
+    return { ...base, change };
+  });
 }
