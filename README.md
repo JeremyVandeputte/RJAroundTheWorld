@@ -79,7 +79,7 @@ En local : `http://localhost:3000/access/` suivi de la valeur de `ACCESS_TOKEN` 
 ### Entrées
 
 - « Enregistrer le brouillon » crée ou met à jour un brouillon, visible uniquement par son auteur et le superuser. Le lieu est facultatif à ce stade.
-- « Publier » rend l'entrée visible (si son voyage l'est). Un lieu (point A) est alors obligatoire.
+- « Publier » rend l'entrée visible (si son voyage l'est). Un lieu (point A) et au moins une personne identifiée sont alors obligatoires.
 - Une entrée publiée reste publiée quand on la modifie. « Retirer » la repasse en brouillon.
 - Un auteur peut supprimer ses propres entrées ; le superuser peut modifier et supprimer toutes les entrées.
 - Texte : `**gras**` et `[texte du lien](https://…)` uniquement ; une adresse `https://…` collée telle quelle devient aussi un lien. Tout le reste est affiché tel que saisi : aucun HTML n'est interprété, et seuls les liens `http` et `https` sont cliquables.

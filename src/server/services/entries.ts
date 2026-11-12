@@ -40,6 +40,7 @@ export type EntryIssue =
   | "invalid_point"
   | "point_b_requires_a"
   | "location_required"
+  | "people_required"
   | "invalid_people";
 
 export type EntryListItem = Pick<Entry, "id" | "date" | "title" | "status" | "authorId"> & { authorName: string };
@@ -120,6 +121,8 @@ function validate(db: Db, input: EntryInput, resultingStatus: EntryStatus): Entr
   if (resultingStatus === "published" && !input.pointA) return "location_required";
 
   const peopleIds = [...new Set(input.peopleIds)];
+  // Same rule as the place: optional for a draft, required once published.
+  if (resultingStatus === "published" && peopleIds.length === 0) return "people_required";
   if (peopleIds.length > 0) {
     const known = db.select({ id: users.id }).from(users).where(inArray(users.id, peopleIds)).all();
     if (known.length !== peopleIds.length) return "invalid_people";

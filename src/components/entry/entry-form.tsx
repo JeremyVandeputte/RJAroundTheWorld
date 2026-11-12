@@ -101,6 +101,7 @@ export function EntryForm({ tripId, entry, people }: EntryFormProps) {
       {people.length > 0 ? (
         <fieldset>
           <legend className="text-sm font-medium">Personnes identifiées</legend>
+          <p className="text-sm text-muted">Au moins une personne est nécessaire pour publier.</p>
           <div className="mt-1 grid grid-cols-1 sm:grid-cols-2">
             {people.map((person) => (
               <label key={person.id} className="flex min-h-11 cursor-pointer items-center gap-3">

@@ -47,6 +47,7 @@ export const messages = {
       "Les coordonnées d'un lieu sont invalides : latitude entre -90 et 90, longitude entre -180 et 180, nom de 100 caractères au maximum.",
     point_b_requires_a: "Indiquez d'abord le point A avant le point B.",
     location_required: "Un lieu (point A) est nécessaire pour qu'une entrée soit publiée.",
+    people_required: "Identifiez au moins une personne pour qu'une entrée soit publiée.",
     invalid_people: "Une des personnes identifiées n'existe pas.",
   },
   admin: {
