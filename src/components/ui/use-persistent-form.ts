@@ -16,7 +16,7 @@ const NETWORK_ERROR =
  * - if the request cannot reach the server at all, a message is shown and the
  *   form is left untouched, instead of the page being replaced by an error.
  */
-export function usePersistentForm(action: FormAction) {
+export function usePersistentForm(action: FormAction, options: { resetOnSuccess?: boolean } = {}) {
   // Used as is only before JavaScript has loaded (plain form submission).
   const [initialState, formAction] = useActionState(action, emptyFormState);
   const [state, setState] = useState<FormState | null>(null);
@@ -27,10 +27,14 @@ export function usePersistentForm(action: FormAction) {
     if (pending) return;
     // Include the clicked button: it carries the chosen action (save, publish...).
     const submitter = (event.nativeEvent as SubmitEvent).submitter;
-    const formData = new FormData(event.currentTarget, submitter);
+    const form = event.currentTarget;
+    const formData = new FormData(form, submitter);
     startTransition(async () => {
       try {
-        setState(await action(emptyFormState, formData));
+        const result = await action(emptyFormState, formData);
+        setState(result);
+        // Short forms (a comment box) are emptied once their content is saved.
+        if (options.resetOnSuccess && !result.error) form.reset();
       } catch (error) {
         // Redirections after a successful save are signalled by an error: let them through.
         unstable_rethrow(error);

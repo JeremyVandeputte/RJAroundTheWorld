@@ -50,6 +50,20 @@ export const messages = {
     people_required: "Identifiez au moins une personne pour qu'une entrée soit publiée.",
     invalid_people: "Une des personnes identifiées n'existe pas.",
   },
+  comment: {
+    not_found: "Cette entrée n'existe pas.",
+    comment_not_found: "Ce commentaire n'existe plus.",
+    forbidden: "Vous n'avez pas la permission de faire cela.",
+    invalid_body: "Le commentaire doit contenir entre 1 et 2 000 caractères.",
+    posted: "Commentaire publié.",
+    edited: "Commentaire modifié.",
+    deleted: "Commentaire supprimé.",
+  },
+  reaction: {
+    not_found: "Cet élément n'existe plus.",
+    forbidden: "Vous n'avez pas la permission de réagir.",
+    invalid_type: "Réaction inconnue.",
+  },
   media: {
     not_found: "Cette entrée n'existe pas.",
     upload_not_found: "Cet envoi n'existe plus. Recommencez l'envoi du fichier.",

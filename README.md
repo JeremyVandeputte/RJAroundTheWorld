@@ -2,7 +2,7 @@
 
 Journal de voyage privé (nom technique : `rjaroundtheworld`). Le site n'est accessible que par un lien secret et n'est jamais indexé par les moteurs de recherche.
 
-> **État du projet** : Phase 1 en cours. Étapes terminées : 1 (socle), 2 (lien secret, connexion, sessions, profil), 3 (administration des comptes, permissions), 4 (voyages et entrées), 5 (photos et vidéos) et 6 (carte). Restent : commentaires et réactions, notifications. Ce README est complété à chaque étape.
+> **État du projet** : Phase 1 en cours. Étapes terminées : 1 (socle), 2 (lien secret, connexion, sessions, profil), 3 (administration des comptes, permissions), 4 (voyages et entrées), 5 (photos et vidéos), 6 (carte) et 7 (commentaires et réactions). Reste : notifications. Ce README est complété à chaque étape.
 
 ## Prérequis
 
@@ -97,10 +97,25 @@ La carte utilise Leaflet (inclus dans le site, aucun CDN) et les fonds de carte 
 - **Visibilité** : seules les entrées publiées que la personne a le droit de voir sont envoyées au navigateur. Les brouillons n'apparaissent jamais sur la carte, même pour leur auteur, et la carte d'un voyage non visible répond 404.
 - **Données envoyées à l'extérieur** : les fonds de carte sont le seul appel du site vers un tiers. OpenStreetMap reçoit la zone affichée et le nom de domaine du site, jamais l'adresse de la page.
 
+## Commentaires et réactions
+
+Ils se trouvent en bas de la page d'une entrée publiée.
+
+- **Qui les voit** : uniquement les personnes connectées qui ont le droit de voir l'entrée. Un visiteur sans compte ne reçoit rien, pas même un compteur : la page lui propose seulement de se connecter.
+- **Commenter** : demande la permission Commenter. Texte simple de 2 000 caractères au maximum, sauts de ligne conservés, aucune mise en forme.
+- **Répondre** : « Répondre » sous un commentaire. Un seul niveau : répondre à une réponse la place sous le même commentaire de départ.
+- **Modifier, supprimer** : chacun modifie et supprime ses propres commentaires et réponses (mention « modifié » après une modification) ; le superuser peut modifier et supprimer tous les commentaires. L'auteur d'une entrée ne peut pas supprimer les commentaires des autres.
+- **Suppression d'un commentaire qui a des réponses** : il est remplacé par « Commentaire supprimé » (son texte et ses réactions sont réellement effacés) pour ne pas casser le fil ; cet emplacement disparaît avec sa dernière réponse.
+- **Réactions** : J'aime 👍, J'adore ❤️, Haha 😆, Wouah 😮, Triste 😢, En colère 😡, sur l'entrée et sur chaque commentaire ou réponse. Demande la permission Réagir. Une seule réaction par personne et par élément : en choisir une autre la remplace, recliquer sur la sienne la retire.
+- **Qui a réagi** : chaque décompte est accompagné de la liste « voir qui a réagi ».
+- Un compte sans Commenter ni Réagir lit les commentaires et les décomptes, sans pouvoir intervenir.
+- Les heures sont affichées dans le fuseau de l'appareil qui consulte.
+
 ## Connexion instable
 
 Le site est pensé pour être utilisé sur un téléphone avec un réseau irrégulier :
 
+- un commentaire envoyé sans réseau reste dans sa zone de saisie, avec un message ;
 - les envois de photos et vidéos reprennent seuls après une coupure courte, et à la demande après une coupure longue (voir ci-dessous) ;
 - si « Enregistrer » ou « Publier » est utilisé sans réseau, un message s'affiche et le formulaire reste intact : titre, texte, lieu et personnes ne sont pas perdus ;
 - un refus du serveur (lieu manquant, par exemple) laisse aussi le formulaire tel qu'il a été rempli ;

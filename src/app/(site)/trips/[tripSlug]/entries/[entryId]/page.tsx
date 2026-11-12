@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { MediaGallery } from "@/components/entry/media-gallery";
 import { RichText } from "@/components/entry/rich-text";
 import { TripMap } from "@/components/map/trip-map";
+import { SocialSection } from "@/components/social/social-section";
 import { Badge } from "@/components/ui/badge";
 import { LinkButton } from "@/components/ui/link-button";
 import { formatDate } from "@/lib/dates";
@@ -79,6 +80,8 @@ export default async function EntryPage({ params }: EntryPageProps) {
           ]}
         />
       ) : null}
+
+      <SocialSection db={getDb()} viewer={viewer} trip={trip} entry={entry} />
 
       {canEditEntry(viewer, trip, entry) ? (
         <div className="border-t border-line pt-4">
