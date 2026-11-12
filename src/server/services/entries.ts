@@ -250,3 +250,37 @@ export function deleteEntry(db: Db, actor: Actor, entryId: number): { ok: true; 
   db.delete(entries).where(eq(entries.id, entryId)).run();
   return { ok: true, trip: found.trip };
 }
+
+export type MapPoint = { lat: number; lng: number; name: string | null };
+export type MapEntry = Pick<Entry, "id" | "title" | "date"> & { pointA: MapPoint; pointB: MapPoint | null };
+
+/**
+ * Places shown on a trip's map: one or two points per published entry the
+ * actor may see. Drafts never appear on the map, even for their author.
+ */
+export function listTripMapEntries(db: Db, actor: Actor, trip: Trip): MapEntry[] {
+  if (!canViewTrip(actor, trip)) return [];
+  return db
+    .select()
+    .from(entries)
+    .where(and(eq(entries.tripId, trip.id), eq(entries.status, "published")))
+    .orderBy(asc(entries.date), asc(entries.id))
+    .all()
+    .filter((entry) => canViewEntry(actor, trip, entry))
+    .flatMap((entry) => {
+      if (entry.pointALat === null || entry.pointALng === null) return [];
+      const pointB =
+        entry.pointBLat !== null && entry.pointBLng !== null
+          ? { lat: entry.pointBLat, lng: entry.pointBLng, name: entry.pointBName }
+          : null;
+      return [
+        {
+          id: entry.id,
+          title: entry.title,
+          date: entry.date,
+          pointA: { lat: entry.pointALat, lng: entry.pointALng, name: entry.pointAName },
+          pointB,
+        },
+      ];
+    });
+}

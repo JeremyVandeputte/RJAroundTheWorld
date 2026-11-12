@@ -9,7 +9,7 @@ import { getEnv } from "@/lib/env";
 import { getDb } from "@/server/db/client";
 import { loadEntry } from "@/server/page-data";
 import { canEditEntry } from "@/server/permissions";
-import { listTaggableUsers } from "@/server/services/entries";
+import { listTaggableUsers, listTripMapEntries } from "@/server/services/entries";
 import { listEntryMedia } from "@/server/services/media";
 
 export const metadata: Metadata = { title: "Modifier l'entrée" };
@@ -43,6 +43,7 @@ export default async function EditEntryPage({ params }: { params: Promise<{ trip
       <EntryForm
         tripId={trip.id}
         people={options}
+        tripPoints={listTripMapEntries(getDb(), viewer, trip).map((item) => item.pointA)}
         entry={{
           id: entry.id,
           date: entry.date,

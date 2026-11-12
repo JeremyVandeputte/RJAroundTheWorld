@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MediaGallery } from "@/components/entry/media-gallery";
 import { RichText } from "@/components/entry/rich-text";
+import { TripMap } from "@/components/map/trip-map";
 import { Badge } from "@/components/ui/badge";
 import { LinkButton } from "@/components/ui/link-button";
 import { formatDate } from "@/lib/dates";
@@ -60,6 +61,24 @@ export default async function EntryPage({ params }: EntryPageProps) {
       {entry.body ? <RichText source={entry.body} /> : null}
 
       <MediaGallery items={listEntryMedia(getDb(), viewer, trip, entry)} />
+
+      {entry.pointALat !== null && entry.pointALng !== null ? (
+        <TripMap
+          className="h-64"
+          scrollWheelZoom={false}
+          entries={[
+            {
+              id: entry.id,
+              title: entry.title,
+              pointA: { lat: entry.pointALat, lng: entry.pointALng, name: entry.pointAName },
+              pointB:
+                entry.pointBLat !== null && entry.pointBLng !== null
+                  ? { lat: entry.pointBLat, lng: entry.pointBLng, name: entry.pointBName }
+                  : null,
+            },
+          ]}
+        />
+      ) : null}
 
       {canEditEntry(viewer, trip, entry) ? (
         <div className="border-t border-line pt-4">

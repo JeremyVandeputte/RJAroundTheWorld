@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { mediaUrl, thumbnailUrl } from "@/lib/media-url";
 import { createUpload, detectUploadKind, UploadError, type UploadedMedia, type UploadKind } from "@/lib/upload-client";
@@ -33,7 +32,6 @@ function formatSize(bytes: number): string {
 
 /** Adds, lists and removes the photos and videos of an entry. Files are sent one after the other. */
 export function MediaManager({ entryId, initialItems, maxPhotoBytes, maxVideoBytes }: MediaManagerProps) {
-  const router = useRouter();
   const [items, setItems] = useState(initialItems);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
@@ -84,9 +82,9 @@ export function MediaManager({ entryId, initialItems, maxPhotoBytes, maxVideoByt
         }
       }
     } finally {
+      // No page refresh here: with the connection down it would reload the page
+      // and lose the files waiting to be resumed. Other pages load fresh data anyway.
       running.current = false;
-      // Show the new files to the rest of the page (and to other pages) on next load.
-      router.refresh();
     }
   }
 
@@ -121,11 +119,15 @@ export function MediaManager({ entryId, initialItems, maxPhotoBytes, maxVideoByt
 
   async function remove(publicId: string) {
     setDeleteError(null);
-    const result = await deleteMediaAction(publicId);
-    if (result.error) {
-      setDeleteError(result.error);
-    } else {
-      setItems((current) => current.filter((item) => item.publicId !== publicId));
+    try {
+      const result = await deleteMediaAction(publicId);
+      if (result.error) {
+        setDeleteError(result.error);
+      } else {
+        setItems((current) => current.filter((item) => item.publicId !== publicId));
+      }
+    } catch {
+      setDeleteError("Connexion interrompue : le fichier n'a pas été supprimé. Réessayez.");
     }
     setConfirmingDelete(null);
   }

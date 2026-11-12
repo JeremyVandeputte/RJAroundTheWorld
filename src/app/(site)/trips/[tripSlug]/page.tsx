@@ -42,16 +42,15 @@ export default async function TripPage({ params }: TripPageProps) {
         {trip.description ? <p className="mt-3">{trip.description}</p> : null}
       </div>
 
-      {canCreateEntry(viewer, trip) || canEditTrip(viewer, trip) ? (
-        <div className="flex flex-wrap gap-3">
-          {canCreateEntry(viewer, trip) ? (
-            <LinkButton href={`/trips/${trip.slug}/entries/new`} variant="primary">
-              Nouvelle entrée
-            </LinkButton>
-          ) : null}
-          {canEditTrip(viewer, trip) ? <LinkButton href={`/trips/${trip.slug}/edit`}>Modifier le voyage</LinkButton> : null}
-        </div>
-      ) : null}
+      <div className="flex flex-wrap gap-3">
+        <LinkButton href={`/trips/${trip.slug}/map`}>Carte</LinkButton>
+        {canCreateEntry(viewer, trip) ? (
+          <LinkButton href={`/trips/${trip.slug}/entries/new`} variant="primary">
+            Nouvelle entrée
+          </LinkButton>
+        ) : null}
+        {canEditTrip(viewer, trip) ? <LinkButton href={`/trips/${trip.slug}/edit`}>Modifier le voyage</LinkButton> : null}
+      </div>
 
       <section aria-labelledby="entries-title">
         <h2 id="entries-title" className="text-lg font-semibold">

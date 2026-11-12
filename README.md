@@ -2,7 +2,7 @@
 
 Journal de voyage privé (nom technique : `rjaroundtheworld`). Le site n'est accessible que par un lien secret et n'est jamais indexé par les moteurs de recherche.
 
-> **État du projet** : Phase 1 en cours. Étapes terminées : 1 (socle), 2 (lien secret, connexion, sessions, profil), 3 (administration des comptes, permissions), 4 (voyages et entrées) et 5 (photos et vidéos). Restent : carte, commentaires et réactions, notifications. Ce README est complété à chaque étape.
+> **État du projet** : Phase 1 en cours. Étapes terminées : 1 (socle), 2 (lien secret, connexion, sessions, profil), 3 (administration des comptes, permissions), 4 (voyages et entrées), 5 (photos et vidéos) et 6 (carte). Restent : commentaires et réactions, notifications. Ce README est complété à chaque étape.
 
 ## Prérequis
 
@@ -83,8 +83,28 @@ En local : `http://localhost:3000/access/` suivi de la valeur de `ACCESS_TOKEN` 
 - Une entrée publiée reste publiée quand on la modifie. « Retirer » la repasse en brouillon.
 - Un auteur peut supprimer ses propres entrées ; le superuser peut modifier et supprimer toutes les entrées.
 - Texte : `**gras**` et `[texte du lien](https://…)` uniquement ; une adresse `https://…` collée telle quelle devient aussi un lien. Tout le reste est affiché tel que saisi : aucun HTML n'est interprété, et seuls les liens `http` et `https` sont cliquables.
-- Lieu : un point (lieu fixe) ou deux points A et B (trajet à sens unique), chacun avec un nom facultatif. En attendant la carte (étape 6), les coordonnées se saisissent à la main.
+- Lieu : un point (lieu fixe) ou deux points A et B (trajet à sens unique), chacun avec un nom facultatif, choisis sur la carte (voir « Carte »).
 - Personnes identifiées : n'importe quels comptes actifs du site.
+
+## Carte
+
+La carte utilise Leaflet (inclus dans le site, aucun CDN) et les fonds de carte d'OpenStreetMap : pas de clé API, pas de service payant.
+
+- **Choisir un lieu** : dans le formulaire d'une entrée, un clic (ou un appui) sur la carte place le lieu. « Ajouter une arrivée (point B) » permet de placer un second point pour un trajet à sens unique ; A et B sont alors reliés par un trait droit (aucun calcul d'itinéraire). Un marqueur se déplace en le faisant glisser ou en cliquant ailleurs. « Retirer le point B » et « Effacer le lieu » annulent.
+- **Centrer sur ma position** : ce bouton n'apparaît qu'en `https` (ou sur `localhost`), car les navigateurs n'autorisent la localisation que sur une connexion sécurisée. Il centre la carte, sans placer de point.
+- **Carte du voyage** : bouton « Carte » sur la page du voyage. Un marqueur par lieu des entrées publiées ; les trajets affichent A et B reliés. Un clic sur un marqueur ouvre l'entrée.
+- **Page d'une entrée** : une petite carte montre son lieu ou son trajet.
+- **Visibilité** : seules les entrées publiées que la personne a le droit de voir sont envoyées au navigateur. Les brouillons n'apparaissent jamais sur la carte, même pour leur auteur, et la carte d'un voyage non visible répond 404.
+- **Données envoyées à l'extérieur** : les fonds de carte sont le seul appel du site vers un tiers. OpenStreetMap reçoit la zone affichée et le nom de domaine du site, jamais l'adresse de la page.
+
+## Connexion instable
+
+Le site est pensé pour être utilisé sur un téléphone avec un réseau irrégulier :
+
+- les envois de photos et vidéos reprennent seuls après une coupure courte, et à la demande après une coupure longue (voir ci-dessous) ;
+- si « Enregistrer » ou « Publier » est utilisé sans réseau, un message s'affiche et le formulaire reste intact : titre, texte, lieu et personnes ne sont pas perdus ;
+- un refus du serveur (lieu manquant, par exemple) laisse aussi le formulaire tel qu'il a été rempli ;
+- ailleurs, une action qui échoue affiche une page « Une erreur est survenue » avec un bouton « Réessayer ».
 
 ## Photos et vidéos
 
@@ -211,7 +231,7 @@ Les tests utilisent une base SQLite en mémoire, avec les vraies migrations.
 drizzle/            migrations SQL
 scripts/            scripts en ligne de commande
 src/app/            pages et routes (Next.js App Router)
-src/components/     composants d'interface
+src/components/     composants d'interface (dont `map/` : carte et choix du lieu)
 src/lib/            code partagé (configuration, textes, nom du site)
 src/proxy.ts        contrôle d'accès appliqué à toutes les requêtes
 src/server/actions/ actions de formulaire (couche fine)

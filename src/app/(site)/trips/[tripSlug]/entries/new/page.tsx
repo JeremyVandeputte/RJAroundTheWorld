@@ -5,7 +5,7 @@ import { EntryForm } from "@/components/entry/entry-form";
 import { getDb } from "@/server/db/client";
 import { loadTrip } from "@/server/page-data";
 import { canCreateEntry } from "@/server/permissions";
-import { listTaggableUsers } from "@/server/services/entries";
+import { listTaggableUsers, listTripMapEntries } from "@/server/services/entries";
 
 export const metadata: Metadata = { title: "Nouvelle entrée" };
 
@@ -18,7 +18,11 @@ export default async function NewEntryPage({ params }: { params: Promise<{ tripS
         ← {trip.title}
       </Link>
       <h1 className="mt-2 mb-6 text-2xl font-semibold tracking-tight">Nouvelle entrée</h1>
-      <EntryForm tripId={trip.id} people={listTaggableUsers(getDb(), viewer)} />
+      <EntryForm
+        tripId={trip.id}
+        people={listTaggableUsers(getDb(), viewer)}
+        tripPoints={listTripMapEntries(getDb(), viewer, trip).map((entry) => entry.pointA)}
+      />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { LocationPicker } from "@/components/map/location-picker";
 import { FormMessage } from "@/components/ui/form-message";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { TextField } from "@/components/ui/text-field";
@@ -25,45 +26,15 @@ type EntryFormProps = {
   };
   /** Accounts that can be identified in the entry. */
   people: { id: number; displayName: string }[];
+  /** Places already used in this trip: where the map opens for an entry without a place. */
+  tripPoints: { lat: number; lng: number }[];
 };
 
-function PointFields({ prefix, legend, hint, point }: { prefix: "pointA" | "pointB"; legend: string; hint: string; point?: Point }) {
-  return (
-    <fieldset className="rounded-md border border-line p-3">
-      <legend className="px-1 text-sm font-medium">{legend}</legend>
-      <p className="mb-3 text-sm text-muted">{hint}</p>
-      <div className="grid grid-cols-2 gap-3">
-        <TextField
-          label="Latitude"
-          name={`${prefix}Lat`}
-          type="text"
-          inputMode="decimal"
-          placeholder="14.6037"
-          defaultValue={point?.lat ?? ""}
-        />
-        <TextField
-          label="Longitude"
-          name={`${prefix}Lng`}
-          type="text"
-          inputMode="decimal"
-          placeholder="-61.0742"
-          defaultValue={point?.lng ?? ""}
-        />
-      </div>
-      <div className="mt-3">
-        <TextField
-          label="Nom du lieu (facultatif)"
-          name={`${prefix}Name`}
-          type="text"
-          maxLength={100}
-          defaultValue={point?.name ?? ""}
-        />
-      </div>
-    </fieldset>
-  );
+function toPickerPoint(point: Point | undefined) {
+  return point && point.lat !== null && point.lng !== null ? { lat: point.lat, lng: point.lng, name: point.name } : null;
 }
 
-export function EntryForm({ tripId, entry, people }: EntryFormProps) {
+export function EntryForm({ tripId, entry, people, tripPoints }: EntryFormProps) {
   const { state, pending, formProps } = usePersistentForm(saveEntryAction);
   const dateInput = useRef<HTMLInputElement>(null);
 
@@ -119,20 +90,11 @@ export function EntryForm({ tripId, entry, people }: EntryFormProps) {
         </fieldset>
       ) : null}
 
-      <div className="space-y-3">
-        <PointFields
-          prefix="pointA"
-          legend="Lieu (point A)"
-          hint="Nécessaire pour publier. Saisie provisoire des coordonnées : le choix sur la carte arrive bientôt."
-          point={entry?.pointA}
-        />
-        <PointFields
-          prefix="pointB"
-          legend="Arrivée (point B, facultatif)"
-          hint="Uniquement pour un trajet à sens unique de A vers B, par exemple une randonnée."
-          point={entry?.pointB}
-        />
-      </div>
+      <LocationPicker
+        initialA={toPickerPoint(entry?.pointA)}
+        initialB={toPickerPoint(entry?.pointB)}
+        contextPoints={tripPoints}
+      />
 
       {!entry ? (
         <fieldset className="rounded-md border border-line p-3">

@@ -10,6 +10,7 @@ import {
   getEntry,
   listEntries,
   listTaggableUsers,
+  listTripMapEntries,
   updateEntry,
   type Entry,
   type EntryInput,
@@ -357,5 +358,66 @@ describe("listing entries", () => {
     expect(titles(cast.publisher, visibleTrip)).toEqual(["Brouillon de Romane", "Publiée"]);
     expect(titles(cast.otherPublisher, visibleTrip)).toEqual(["Brouillon de Paul", "Publiée"]);
     expect(titles(cast.superuser, visibleTrip)).toEqual(["Brouillon de Paul", "Brouillon de Romane", "Publiée"]);
+  });
+});
+
+describe("trip map", () => {
+  const points = (actor: Actor, trip: Trip) => listTripMapEntries(db, actor, trip);
+
+  it("shows one place per published entry, with both points for a one-way route", () => {
+    mustCreateEntry(cast.publisher, visibleTrip, "publish", { title: "Plage", date: "2026-11-02" });
+    mustCreateEntry(cast.publisher, visibleTrip, "publish", {
+      title: "Randonnée",
+      date: "2026-11-01",
+      pointA: { lat: 14.8, lng: -61.16, name: "Départ" },
+      pointB: { lat: 14.81, lng: -61.17, name: "" },
+    });
+
+    expect(points(null, visibleTrip)).toEqual([
+      {
+        id: expect.any(Number),
+        title: "Randonnée",
+        date: "2026-11-01",
+        pointA: { lat: 14.8, lng: -61.16, name: "Départ" },
+        pointB: { lat: 14.81, lng: -61.17, name: null },
+      },
+      {
+        id: expect.any(Number),
+        title: "Plage",
+        date: "2026-11-02",
+        pointA: { lat: 14.6037, lng: -61.0742, name: "Fort-de-France" },
+        pointB: null,
+      },
+    ]);
+  });
+
+  it("never shows drafts, not even to their author, nor entries without a place", () => {
+    mustCreateEntry(cast.publisher, visibleTrip, "save", { title: "Brouillon avec lieu" });
+    mustCreateEntry(cast.publisher, visibleTrip, "save", { title: "Brouillon sans lieu", pointA: null });
+    for (const actor of [null, cast.guest, cast.publisher, cast.superuser]) {
+      expect(points(actor, visibleTrip)).toEqual([]);
+    }
+  });
+
+  it("removes an entry from the map when it is unpublished", () => {
+    const entry = mustCreateEntry(cast.publisher, visibleTrip, "publish");
+    expect(points(null, visibleTrip)).toHaveLength(1);
+    updateEntry(db, cast.publisher, entry.id, input(), "unpublish");
+    expect(points(null, visibleTrip)).toEqual([]);
+  });
+
+  it("shows nothing of a hidden trip to those who cannot see it", () => {
+    mustCreateEntry(tripOwner, hiddenTrip, "publish", { title: "Surprise" });
+    for (const actor of [null, cast.guest, cast.publisher, cast.manager]) {
+      expect(points(actor, hiddenTrip)).toEqual([]);
+    }
+    expect(points(tripOwner, hiddenTrip).map((entry) => entry.title)).toEqual(["Surprise"]);
+    expect(points(cast.superuser, hiddenTrip)).toHaveLength(1);
+  });
+
+  it("only shows the places of the requested trip", () => {
+    mustCreateEntry(cast.publisher, visibleTrip, "publish", { title: "Ici" });
+    mustCreateEntry(tripOwner, hiddenTrip, "publish", { title: "Ailleurs" });
+    expect(points(cast.superuser, visibleTrip).map((entry) => entry.title)).toEqual(["Ici"]);
   });
 });
