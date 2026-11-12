@@ -3,8 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { messages } from "@/lib/messages";
+import { getEnv } from "@/lib/env";
 import { getCurrentUser } from "@/server/auth/current-user";
 import { getDb } from "@/server/db/client";
+import { removeEntryDirs } from "@/server/media/storage";
 import {
   createEntry,
   deleteEntry,
@@ -67,7 +69,9 @@ export async function saveEntryAction(_previous: FormState, formData: FormData):
   if (!result.ok) return { error: messages.entry[result.reason] };
 
   revalidatePath("/", "layout");
-  redirect(`/trips/${result.trip.slug}/entries/${result.entry.id}`);
+  const entryPath = `/trips/${result.trip.slug}/entries/${result.entry.id}`;
+  // "Save and add photos": go straight to the media section of the edit page.
+  redirect(formString(formData, "intent") === "save_media" ? `${entryPath}/edit#media` : entryPath);
 }
 
 export async function deleteEntryAction(_previous: FormState, formData: FormData): Promise<FormState> {
@@ -75,6 +79,7 @@ export async function deleteEntryAction(_previous: FormState, formData: FormData
   if (entryId === null) return { error: messages.entry.not_found };
   const result = deleteEntry(getDb(), await getCurrentUser(), entryId);
   if (!result.ok) return { error: messages.entry[result.reason] };
+  await removeEntryDirs(getEnv().mediaDir, [entryId]);
 
   revalidatePath("/", "layout");
   redirect(`/trips/${result.trip.slug}`);

@@ -231,7 +231,8 @@ describe("deleting trips", () => {
     db.insert(reactions).values({ userId: cast.guest.id, commentId, type: "like" }).run();
     expect(countTripEntries(db, trip.id)).toBe(2);
 
-    expect(deleteTrip(db, cast.manager, trip.id)).toEqual({ ok: true });
+    // The deleted entries are reported, so their media files can be removed from disk.
+    expect(deleteTrip(db, cast.manager, trip.id)).toEqual({ ok: true, entryIds: [entry.id, entry.id + 1] });
 
     expect(exists(trip)).toBe(false);
     expect(db.select().from(comments).all()).toHaveLength(0);
@@ -244,7 +245,7 @@ describe("deleting trips", () => {
   it("lets the superuser delete any trip", () => {
     const trip = mustCreate(cast.manager);
     addEntry(trip);
-    expect(deleteTrip(db, cast.superuser, trip.id)).toEqual({ ok: true });
+    expect(deleteTrip(db, cast.superuser, trip.id)).toMatchObject({ ok: true });
     expect(exists(trip)).toBe(false);
     expect(deleteTrip(db, cast.superuser, 9999)).toEqual({ ok: false, reason: "trip_not_found" });
   });

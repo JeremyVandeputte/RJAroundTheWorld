@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { MediaGallery } from "@/components/entry/media-gallery";
 import { RichText } from "@/components/entry/rich-text";
 import { Badge } from "@/components/ui/badge";
 import { LinkButton } from "@/components/ui/link-button";
 import { formatDate } from "@/lib/dates";
+import { getDb } from "@/server/db/client";
 import { loadEntry } from "@/server/page-data";
 import { canEditEntry } from "@/server/permissions";
+import { listEntryMedia } from "@/server/services/media";
 
 type EntryPageProps = { params: Promise<{ tripSlug: string; entryId: string }> };
 
@@ -55,6 +58,8 @@ export default async function EntryPage({ params }: EntryPageProps) {
       </header>
 
       {entry.body ? <RichText source={entry.body} /> : null}
+
+      <MediaGallery items={listEntryMedia(getDb(), viewer, trip, entry)} />
 
       {canEditEntry(viewer, trip, entry) ? (
         <div className="border-t border-line pt-4">

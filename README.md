@@ -2,7 +2,7 @@
 
 Journal de voyage privé (nom technique : `rjaroundtheworld`). Le site n'est accessible que par un lien secret et n'est jamais indexé par les moteurs de recherche.
 
-> **État du projet** : Phase 1 en cours. Étapes terminées : 1 (socle), 2 (lien secret, connexion, sessions, profil), 3 (administration des comptes, permissions) et 4 (voyages et entrées). Restent : médias, carte, commentaires et réactions, notifications. Ce README est complété à chaque étape.
+> **État du projet** : Phase 1 en cours. Étapes terminées : 1 (socle), 2 (lien secret, connexion, sessions, profil), 3 (administration des comptes, permissions), 4 (voyages et entrées) et 5 (photos et vidéos). Restent : carte, commentaires et réactions, notifications. Ce README est complété à chaque étape.
 
 ## Prérequis
 
@@ -86,6 +86,37 @@ En local : `http://localhost:3000/access/` suivi de la valeur de `ACCESS_TOKEN` 
 - Lieu : un point (lieu fixe) ou deux points A et B (trajet à sens unique), chacun avec un nom facultatif. En attendant la carte (étape 6), les coordonnées se saisissent à la main.
 - Personnes identifiées : n'importe quels comptes actifs du site.
 
+## Photos et vidéos
+
+Les photos et vidéos s'ajoutent depuis « Modifier l'entrée », section « Photos et vidéos » (sur une nouvelle entrée : bouton « Enregistrer le brouillon et ajouter des photos »). Chaque fichier est enregistré dès qu'il est envoyé, sans attendre « Enregistrer ».
+
+- **Stockage** : les fichiers sont sur le disque, dans `MEDIA_DIR` (hors de `public/`), un dossier par entrée. La base ne garde que le chemin et les métadonnées.
+- **Photos** : JPEG, PNG ou WebP, 10 Mo maximum par défaut. Chaque photo est redressée, réduite à 2000 px sur le grand côté et convertie en JPEG, avec une miniature de 480 px. L'original n'est pas conservé.
+- **Vie privée** : les fichiers enregistrés ne contiennent plus aucune métadonnée (position GPS, modèle d'appareil). La position et la date de prise de vue sont seulement notées en base, pour la Phase 2.
+- **Vidéos** : MP4, MOV ou WebM, 300 Mo maximum par défaut, enregistrées telles quelles (pas de conversion en Phase 1) et lues par le lecteur du navigateur.
+- **Quota** : 30 Go au total par défaut. Un envoi qui le dépasserait est refusé avant d'être reçu. 100 fichiers au maximum par entrée.
+- **Envoi robuste** : un fichier est envoyé par morceaux de 4 Mo. Si la connexion saute, le morceau en cours est renvoyé automatiquement (4 nouvelles tentatives) ; au-delà, l'envoi s'arrête avec un message et le bouton « Reprendre l'envoi » repart d'où il s'était arrêté, tant que la page reste ouverte.
+- **Accès** : aucun fichier n'a d'adresse publique. Ils passent par `/api/media/<identifiant aléatoire>`, qui applique les mêmes règles que la page de l'entrée : lien secret, voyage visible, entrée publiée. Dans tous les autres cas la réponse est un 404.
+- **Suppression** : supprimer une entrée ou un voyage supprime aussi ses fichiers du disque.
+
+Limites connues de la Phase 1 :
+
+- Les photos HEIC ne sont pas prises en charge. L'iPhone convertit normalement en JPEG à l'envoi ; sinon, régler Appareil photo > Formats > « Le plus compatible ».
+- Les vidéos ne sont pas converties : une vidéo iPhone en HEVC peut ne pas se lire dans certains navigateurs (même réglage conseillé).
+- Les vidéos n'ont pas de miniature.
+- Un envoi interrompu ne peut pas être repris après fermeture ou rechargement de la page. Les fichiers temporaires abandonnés sont nettoyés au bout de 24 heures.
+- Si la réponse du serveur se perd juste après l'envoi d'une petite photo, celle-ci peut apparaître en double : il suffit de supprimer le doublon.
+
+## Tester depuis un téléphone
+
+Avec `npm run dev`, le site est aussi accessible depuis un téléphone connecté au même réseau Wi-Fi :
+
+1. Trouver l'adresse de l'ordinateur sur le réseau local (`ipconfig` sous Windows, ligne « Adresse IPv4 », par exemple `192.168.1.20`).
+2. La mettre dans `.env` : `DEV_ALLOWED_ORIGINS=192.168.1.20`, puis relancer `npm run dev`.
+3. Sur le téléphone, ouvrir `http://192.168.1.20:3000/access/<ACCESS_TOKEN>`.
+
+Si le téléphone n'atteint pas le site, le pare-feu de l'ordinateur bloque probablement Node.js : autoriser l'accès sur les réseaux privés. Le bouton « Copier » ne fonctionne pas dans ce mode (le presse-papiers exige `https` ou `localhost`).
+
 ## Administration
 
 La page « Administration » (lien dans l'en-tête, visible du superuser uniquement) permet de :
@@ -147,6 +178,7 @@ Les quatre permissions sont indépendantes. Pour préparer un voyage masqué et 
 | `MEDIA_QUOTA_GB` | non | `30` | Quota total des médias, en Go. |
 | `SESSION_DAYS` | non | `30` | Durée d'une session, en jours. |
 | `TRUST_PROXY` | non | `false` | Mettre `true` derrière un reverse proxy qui renseigne `X-Forwarded-For`. |
+| `DEV_ALLOWED_ORIGINS` | non | | Développement uniquement : adresses autorisées à utiliser `npm run dev` depuis un autre appareil (voir « Tester depuis un téléphone »). |
 
 Le serveur refuse de démarrer si une variable est invalide et indique laquelle, sans jamais afficher sa valeur.
 
@@ -185,6 +217,8 @@ src/proxy.ts        contrôle d'accès appliqué à toutes les requêtes
 src/server/actions/ actions de formulaire (couche fine)
 src/server/auth/    lien secret, sessions, mots de passe, anti brute force
 src/server/db/      schéma et connexion à la base
+src/server/media/   fichiers sur disque : envoi par morceaux, traitement des photos, stockage
+src/app/api/        routes d'envoi et de lecture des médias
 src/server/permissions.ts  matrice de permissions (source unique)
 src/server/services/ logique métier, couverte par les tests
 tests/              tests automatisés

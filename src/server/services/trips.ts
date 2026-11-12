@@ -132,15 +132,23 @@ export function updateTrip(db: Db, actor: Actor, tripId: number, input: TripInpu
   return trip ? { ok: true, trip } : { ok: false, reason: "trip_not_found" };
 }
 
-/** Deletes a trip together with all its entries, their comments and reactions. */
-export function deleteTrip(db: Db, actor: Actor, tripId: number): { ok: true } | { ok: false; reason: TripRefusal } {
+/**
+ * Deletes a trip together with all its entries, their comments and reactions.
+ * Returns the ids of the deleted entries: their media files must be removed from disk.
+ */
+export function deleteTrip(
+  db: Db,
+  actor: Actor,
+  tripId: number,
+): { ok: true; entryIds: number[] } | { ok: false; reason: TripRefusal } {
   const found = findEditable(db, actor, tripId);
   if (!found.ok) return found;
 
-  db.transaction((tx) => {
-    // Comments, reactions, notifications and tags go with their entry.
-    tx.delete(entries).where(eq(entries.tripId, tripId)).run();
+  const entryIds = db.transaction((tx) => {
+    // Comments, reactions, media rows, notifications and tags go with their entry.
+    const deleted = tx.delete(entries).where(eq(entries.tripId, tripId)).returning({ id: entries.id }).all();
     tx.delete(trips).where(eq(trips.id, tripId)).run();
+    return deleted.map((entry) => entry.id);
   });
-  return { ok: true };
+  return { ok: true, entryIds };
 }

@@ -134,6 +134,18 @@ export function EntryForm({ tripId, entry, people }: EntryFormProps) {
         />
       </div>
 
+      {!entry ? (
+        <fieldset className="rounded-md border border-line p-3">
+          <legend className="px-1 text-sm font-medium">Photos et vidéos</legend>
+          <p className="mb-3 text-sm text-muted">
+            Les photos et vidéos s&apos;ajoutent une fois le brouillon enregistré.
+          </p>
+          <SubmitButton name="intent" value="save_media" variant="secondary" pending={pending}>
+            Enregistrer le brouillon et ajouter des photos
+          </SubmitButton>
+        </fieldset>
+      ) : null}
+
       <FormMessage state={state} />
 
       <div className="flex flex-wrap gap-3">

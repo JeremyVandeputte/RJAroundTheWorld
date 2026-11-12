@@ -4,10 +4,12 @@ import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { LinkButton } from "@/components/ui/link-button";
 import { formatDate, formatDateRange } from "@/lib/dates";
+import { thumbnailUrl } from "@/lib/media-url";
 import { getDb } from "@/server/db/client";
 import { loadTrip } from "@/server/page-data";
 import { canCreateEntry, canEditTrip } from "@/server/permissions";
 import { listEntries } from "@/server/services/entries";
+import { listCoverPhotos } from "@/server/services/media";
 
 type TripPageProps = { params: Promise<{ tripSlug: string }> };
 
@@ -20,6 +22,11 @@ export default async function TripPage({ params }: TripPageProps) {
   const { viewer, trip } = await loadTrip((await params).tripSlug);
   if (!trip) notFound();
   const entries = listEntries(getDb(), viewer, trip);
+  // Covers are looked up only for the entries this viewer is allowed to see.
+  const covers = listCoverPhotos(
+    getDb(),
+    entries.map((entry) => entry.id),
+  );
 
   return (
     <div className="space-y-6">
@@ -58,14 +65,27 @@ export default async function TripPage({ params }: TripPageProps) {
               <li key={entry.id}>
                 <Link
                   href={`/trips/${trip.slug}/entries/${entry.id}`}
-                  className="block rounded-md border border-line bg-white px-4 py-3 hover:border-accent/50"
+                  className="flex items-center gap-3 rounded-md border border-line bg-white px-4 py-3 hover:border-accent/50"
                 >
-                  <span className="block text-sm text-muted">{formatDate(entry.date)}</span>
-                  <span className="mt-0.5 flex flex-wrap items-center gap-2">
-                    <span className="font-semibold">{entry.title}</span>
-                    {entry.status === "draft" ? <Badge tone="warning">Brouillon</Badge> : null}
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm text-muted">{formatDate(entry.date)}</span>
+                    <span className="mt-0.5 flex flex-wrap items-center gap-2">
+                      <span className="font-semibold">{entry.title}</span>
+                      {entry.status === "draft" ? <Badge tone="warning">Brouillon</Badge> : null}
+                    </span>
+                    <span className="mt-0.5 block text-sm text-muted">par {entry.authorName}</span>
                   </span>
-                  <span className="mt-0.5 block text-sm text-muted">par {entry.authorName}</span>
+                  {covers.has(entry.id) ? (
+                    <img
+                      src={thumbnailUrl(covers.get(entry.id)!.publicId)}
+                      alt=""
+                      width={64}
+                      height={64}
+                      loading="lazy"
+                      decoding="async"
+                      className="size-16 shrink-0 rounded-md object-cover"
+                    />
+                  ) : null}
                 </Link>
               </li>
             ))}

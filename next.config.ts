@@ -14,10 +14,19 @@ export const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
 ];
 
+// Development only: other devices allowed to use the dev server, for instance
+// a phone on the local network ("192.168.1.20"). Hostnames, comma-separated.
+const allowedDevOrigins = (process.env.DEV_ALLOWED_ORIGINS ?? "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  allowedDevOrigins,
   serverExternalPackages: [
     "better-sqlite3",
+    "sharp",
     "@node-rs/argon2",
     "@zxcvbn-ts/core",
     "@zxcvbn-ts/language-common",

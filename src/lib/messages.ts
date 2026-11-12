@@ -50,6 +50,23 @@ export const messages = {
     people_required: "Identifiez au moins une personne pour qu'une entrée soit publiée.",
     invalid_people: "Une des personnes identifiées n'existe pas.",
   },
+  media: {
+    not_found: "Cette entrée n'existe pas.",
+    upload_not_found: "Cet envoi n'existe plus. Recommencez l'envoi du fichier.",
+    forbidden: "Vous n'avez pas le droit d'ajouter des fichiers à cette entrée.",
+    invalid_request: "Envoi invalide.",
+    chunk_too_large: "Envoi invalide.",
+    offset_mismatch: "Reprise de l'envoi.",
+    too_large: (kind: "photo" | "video", maxBytes: number) =>
+      `${kind === "photo" ? "Cette photo" : "Cette vidéo"} dépasse la taille maximale de ${Math.floor(maxBytes / (1024 * 1024))} Mo.`,
+    quota_exceeded: "L'espace de stockage du site est plein. Supprimez des fichiers ou augmentez le quota.",
+    too_many: "Cette entrée contient déjà le nombre maximal de fichiers (100).",
+    unsupported_image:
+      "Ce format d'image n'est pas pris en charge. Utilisez une photo JPEG, PNG ou WebP (sur iPhone : réglage Appareil photo > Formats > Le plus compatible).",
+    unsupported_video: "Ce format de vidéo n'est pas pris en charge. Utilisez une vidéo MP4, MOV ou WebM.",
+    delete_forbidden: "Vous n'avez pas le droit de supprimer ce fichier.",
+    delete_not_found: "Ce fichier n'existe plus.",
+  },
   admin: {
     forbidden: "Cette action est réservée à l'administrateur.",
     cannot_target_superuser: "Cette action n'est pas possible sur le compte administrateur.",

@@ -3,11 +3,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DeleteEntryForm } from "@/components/entry/delete-entry-form";
 import { EntryForm } from "@/components/entry/entry-form";
+import { MediaManager } from "@/components/entry/media-manager";
 import { Badge } from "@/components/ui/badge";
+import { getEnv } from "@/lib/env";
 import { getDb } from "@/server/db/client";
 import { loadEntry } from "@/server/page-data";
 import { canEditEntry } from "@/server/permissions";
 import { listTaggableUsers } from "@/server/services/entries";
+import { listEntryMedia } from "@/server/services/media";
 
 export const metadata: Metadata = { title: "Modifier l'entrée" };
 
@@ -16,6 +19,7 @@ export default async function EditEntryPage({ params }: { params: Promise<{ trip
   const { viewer, trip, detail } = await loadEntry(tripSlug, entryId);
   if (!trip || !detail || !canEditEntry(viewer, trip, detail.entry)) notFound();
   const { entry, people } = detail;
+  const env = getEnv();
 
   // Keep already identified people selectable even if their account was deactivated since.
   const taggable = listTaggableUsers(getDb(), viewer);
@@ -50,6 +54,18 @@ export default async function EditEntryPage({ params }: { params: Promise<{ trip
           peopleIds: people.map((person) => person.id),
         }}
       />
+
+      <section id="media" aria-labelledby="media-title" className="mt-10 scroll-mt-4 border-t border-line pt-6">
+        <h2 id="media-title" className="mb-4 text-lg font-semibold">
+          Photos et vidéos
+        </h2>
+        <MediaManager
+          entryId={entry.id}
+          initialItems={listEntryMedia(getDb(), viewer, trip, entry)}
+          maxPhotoBytes={env.maxPhotoBytes}
+          maxVideoBytes={env.maxVideoBytes}
+        />
+      </section>
 
       <div className="mt-10 border-t border-line pt-4">
         <DeleteEntryForm entryId={entry.id} />

@@ -3,8 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { messages } from "@/lib/messages";
+import { getEnv } from "@/lib/env";
 import { getCurrentUser } from "@/server/auth/current-user";
 import { getDb } from "@/server/db/client";
+import { removeEntryDirs } from "@/server/media/storage";
 import { createTrip, deleteTrip, updateTrip, type TripInput } from "@/server/services/trips";
 import { formBoolean, formId, formString, type FormState } from "./form-state";
 
@@ -38,6 +40,7 @@ export async function deleteTripAction(_previous: FormState, formData: FormData)
   if (tripId === null) return { error: messages.trip.trip_not_found };
   const result = deleteTrip(getDb(), await getCurrentUser(), tripId);
   if (!result.ok) return { error: messages.trip[result.reason] };
+  await removeEntryDirs(getEnv().mediaDir, result.entryIds);
 
   revalidatePath("/", "layout");
   redirect("/");
