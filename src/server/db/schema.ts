@@ -214,6 +214,12 @@ export const media = sqliteTable(
     exifLat: real("exif_lat"),
     exifLng: real("exif_lng"),
     exifTakenAt: text("exif_taken_at"),
+    /**
+     * Video conversion (only when FFMPEG_PATH is set): "pending" while the
+     * original waits to be converted, "failed" when it could not be (the
+     * original stays). Null when there is nothing to do.
+     */
+    processing: text("processing", { enum: ["pending", "failed"] }),
     createdAt: createdAt(),
   },
   (t) => [

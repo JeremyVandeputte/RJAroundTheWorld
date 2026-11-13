@@ -67,6 +67,7 @@ Toute la configuration passe par des variables d'environnement (fichier `.env` e
 | `MEDIA_DIR` | non | `./data/media` | Dossier des photos et vidéos. Doit rester hors de `public/`. |
 | `MAX_PHOTO_MB` | non | `10` | Taille maximale d'une photo envoyée, en Mo. |
 | `MAX_VIDEO_MB` | non | `300` | Taille maximale d'une vidéo, en Mo. |
+| `FFMPEG_PATH` | non | vide | Programme ffmpeg qui convertit les vidéos après l'envoi (voir « Photos et vidéos »). Vide : les vidéos restent telles qu'envoyées. |
 | `MEDIA_QUOTA_GB` | non | `30` | Espace total réservé aux photos et vidéos, en Go. |
 | `SESSION_DAYS` | non | `30` | Durée d'une session sans visite, en jours. |
 | `TRUST_PROXY` | non | `false` | `true` derrière un reverse proxy qui ajoute l'adresse du visiteur à `X-Forwarded-For` (sert à l'anti brute force). |
@@ -166,8 +167,9 @@ Le journal et la carte d'un voyage ont un bloc « Filtrer » :
 Elles s'ajoutent depuis « Modifier l'entrée », section « Photos et vidéos ». Sur une nouvelle entrée, le bouton « Enregistrer le brouillon et ajouter des photos » y mène directement. Chaque fichier est enregistré dès qu'il est envoyé, sans attendre « Enregistrer ».
 
 - **Photos** : JPEG, PNG ou WebP, 10 Mo maximum par défaut. Chaque photo est redressée, réduite à 2000 px sur le grand côté et convertie en JPEG, avec une miniature de 480 px. L'original n'est pas conservé.
-- **Vie privée** : les fichiers enregistrés ne contiennent plus aucune métadonnée (position GPS, modèle d'appareil). La position et la date de prise de vue sont seulement notées en base, pour la Phase 2.
-- **Vidéos** : MP4, MOV ou WebM, 300 Mo maximum par défaut, enregistrées telles quelles et lues par le lecteur du navigateur.
+- **Vie privée** : les photos enregistrées ne contiennent plus aucune métadonnée (position GPS, modèle d'appareil). Leur position et leur date de prise de vue sont seulement notées en base, pour placer l'entrée sur la carte. Les vidéos ne perdent leurs métadonnées (dont la position GPS enregistrée par un téléphone) que si elles sont converties avec `FFMPEG_PATH` ; sinon elles restent telles qu'envoyées.
+- **Vidéos** : MP4, MOV ou WebM, 300 Mo maximum par défaut, lues par le lecteur du navigateur. Sans `FFMPEG_PATH`, elles sont enregistrées telles quelles.
+- **Conversion des vidéos** (si `FFMPEG_PATH` désigne le programme ffmpeg) : après l'envoi, chaque vidéo est convertie en MP4 H.264/AAC, lisible partout (une vidéo iPhone en HEVC ne l'est pas), réduite à 1920 px sur le grand côté (1080p), qualité CRF 26, sans métadonnées (un téléphone y enregistre la position GPS) et prête à être lue avant d'être entièrement chargée. La conversion se fait en arrière-plan, une vidéo à la fois : l'envoi n'attend pas, et la vidéo d'origine est lue en attendant. Elle reprend après un redémarrage du serveur. Si elle échoue, l'original est gardé et la raison est écrite dans les journaux du serveur. Compter de l'ordre d'une à quelques minutes par vidéo selon la machine.
 - **Quota** : 30 Go au total par défaut ; un envoi qui le dépasserait est refusé avant d'être reçu. 100 fichiers au maximum par entrée.
 - **Affichage** : miniatures chargées au fil du défilement ; un appui ouvre la photo en grand.
 - **Miniature d'une entrée** : la photo affichée dans la liste du voyage. Par défaut la première ; « Miniature » sous une autre photo la choisit à la place.
@@ -284,7 +286,7 @@ Si le téléphone n'atteint pas le site, le pare-feu de l'ordinateur bloque prob
 
 Le site a besoin d'un serveur qui tourne en continu, avec un disque persistant pour la base et les fichiers : un VPS ou un NAS convient, une plateforme « serverless » non.
 
-1. **Préparer le serveur** : Node.js 22.12 ou plus récent. Les dossiers de `DATABASE_PATH` et `MEDIA_DIR` doivent être sur un disque persistant et sauvegardé.
+1. **Préparer le serveur** : Node.js 22.12 ou plus récent ; ffmpeg en option pour convertir les vidéos (`apt install ffmpeg` sur Debian/Ubuntu, puis `FFMPEG_PATH=/usr/bin/ffmpeg`). Les dossiers de `DATABASE_PATH` et `MEDIA_DIR` doivent être sur un disque persistant et sauvegardé.
 2. **Configurer** les variables d'environnement, notamment `APP_URL` en `https` et `TRUST_PROXY=true`.
 3. **Installer et compiler**
 
@@ -394,7 +396,7 @@ tests/                    tests automatisés
 ## Limites connues
 
 - **Photos HEIC non prises en charge.** L'iPhone convertit normalement en JPEG à l'envoi ; sinon, régler Appareil photo > Formats > « Le plus compatible ».
-- **Vidéos ni converties ni compressées**, et sans miniature. Une vidéo iPhone en HEVC peut ne pas se lire dans certains navigateurs (même réglage conseillé).
+- **Vidéos sans miniature**. Sans `FFMPEG_PATH`, elles ne sont ni converties ni compressées : une vidéo iPhone en HEVC peut alors ne pas se lire dans certains navigateurs (même réglage conseillé).
 - **Envoi interrompu** : il ne peut pas être repris après fermeture ou rechargement de la page. Les fichiers temporaires abandonnés sont nettoyés au bout de 24 heures.
 - **Doublon possible** : si la réponse du serveur se perd juste après l'envoi d'une petite photo, celle-ci peut apparaître en double ; il suffit de supprimer le doublon.
 - **Ordre des photos** : elles restent dans l'ordre d'ajout.
@@ -412,7 +414,6 @@ Réalisé :
 - **Carte de tous les voyages** (voir « Carte »).
 - **Recherche et statistiques** (voir « Recherche et statistiques »).
 - **Export d'un voyage** en archive ZIP, avec une page lisible hors ligne et imprimable en PDF (voir « Exporter un voyage »).
+- **Conversion des vidéos** avec ffmpeg, optionnelle (voir « Photos et vidéos »).
 
-Pistes restantes :
-
-- **Transcodage des vidéos** et compression plus poussée, par exemple pour lire les vidéos HEVC partout.
+Toutes les pistes prévues sont réalisées.

@@ -9,4 +9,8 @@ export async function register() {
   const { getDb } = await import("@/server/db/client");
   const { runMigrations } = await import("@/server/db/migrate");
   runMigrations(getDb());
+
+  // Video conversions interrupted by a restart start again.
+  const { resumePendingTranscodes } = await import("@/server/media/transcode");
+  resumePendingTranscodes(getDb(), getEnv());
 }

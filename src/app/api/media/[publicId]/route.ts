@@ -38,7 +38,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     "Content-Type": wantsThumbnail ? "image/jpeg" : media.mimeType,
     "Accept-Ranges": "bytes",
     // Private content: browsers may keep it (a file never changes), shared caches may not.
-    "Cache-Control": "private, max-age=604800, immutable",
+    // A video waiting for conversion will be replaced by the converted file: not kept.
+    "Cache-Control": media.processing === "pending" ? "private, no-store" : "private, max-age=604800, immutable",
     "Content-Disposition": "inline",
   });
 

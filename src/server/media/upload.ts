@@ -1,7 +1,8 @@
 import type { Env } from "@/lib/env";
 import type { PhotoPosition } from "@/lib/photo-position";
 import type { Db } from "@/server/db/client";
-import type { MediaKind } from "@/server/db/schema";
+import { eq } from "drizzle-orm";
+import { media as mediaTable, type MediaKind } from "@/server/db/schema";
 import type { Actor } from "@/server/permissions";
 import {
   checkTripCoverUploadAllowed,
@@ -13,6 +14,7 @@ import {
   type UploadRefusal,
 } from "@/server/services/media";
 import { processPhoto, storeVideo, UnsupportedMediaError } from "./processing";
+import { scheduleTranscode } from "./transcode";
 import {
   appendToUpload,
   cleanupStaleUploads,
@@ -35,7 +37,8 @@ import {
 /** Largest chunk accepted in one request (the client sends smaller ones). */
 export const MAX_CHUNK_BYTES = 8 * 1024 * 1024;
 
-export type UploadConfig = Pick<Env, "mediaDir" | "maxPhotoBytes" | "maxVideoBytes" | "mediaQuotaBytes">;
+export type UploadConfig = Pick<Env, "mediaDir" | "maxPhotoBytes" | "maxVideoBytes" | "mediaQuotaBytes"> &
+  Partial<Pick<Env, "ffmpegPath">>;
 
 export type UploadResult =
   /** The whole file has arrived and is stored. */
@@ -231,7 +234,13 @@ async function receiveChunk(
       exifLat: null,
       exifLng: null,
       exifTakenAt: null,
+      // With ffmpeg configured, the video is converted after this answer.
+      processing: config.ffmpegPath ? "pending" : null,
     });
+    if (config.ffmpegPath) {
+      const recorded = db.select({ id: mediaTable.id }).from(mediaTable).where(eq(mediaTable.publicId, publicId)).get();
+      if (recorded) void scheduleTranscode(db, { mediaDir: config.mediaDir, ffmpegPath: config.ffmpegPath }, recorded.id);
+    }
     return { ok: true, status: "complete", media };
   } catch (error) {
     if (error instanceof UnsupportedMediaError) return { ok: false, reason: error.reason };

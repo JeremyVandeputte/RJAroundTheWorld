@@ -123,7 +123,7 @@ export function detectVideoContainer(header: Uint8Array): VideoContainer | null 
   return isEbml ? { extension: "webm", mimeType: "video/webm" } : null;
 }
 
-/** Moves an uploaded video into `destDir` as is (no transcoding in Phase 1). */
+/** Moves an uploaded video into `destDir` as is (converted later only if FFMPEG_PATH is set, see transcode.ts). */
 export async function storeVideo(
   sourcePath: string,
   destDir: string,

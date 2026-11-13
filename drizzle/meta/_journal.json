@@ -50,6 +50,13 @@
       "when": 1794593328265,
       "tag": "0006_thumbnails",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1794596922030,
+      "tag": "0007_video_processing",
+      "breakpoints": true
     }
   ]
 }

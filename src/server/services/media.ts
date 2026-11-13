@@ -198,7 +198,8 @@ export function checkTripCoverUploadAllowed(
 export type NewMedia = Pick<
   typeof media.$inferInsert,
   "publicId" | "kind" | "filePath" | "thumbPath" | "mimeType" | "sizeBytes" | "width" | "height" | "exifLat" | "exifLng" | "exifTakenAt"
->;
+> &
+  Partial<Pick<typeof media.$inferInsert, "processing">>;
 
 /** Records a stored file of an entry. Only the path and metadata go to the database. */
 export function recordMedia(db: Db, entryId: number, uploaderId: number, file: NewMedia): MediaItem {

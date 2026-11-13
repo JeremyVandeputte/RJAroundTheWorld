@@ -32,6 +32,7 @@ const envSchema = z
     MEDIA_QUOTA_GB: positiveNumber(30),
     SESSION_DAYS: positiveNumber(30),
     TRUST_PROXY: optional(z.enum(["true", "false"]).default("false")),
+    FFMPEG_PATH: optional(z.string().optional()),
   })
   .superRefine((value, ctx) => {
     const url = URL.canParse(value.APP_URL) ? new URL(value.APP_URL) : null;
@@ -62,6 +63,8 @@ export type Env = {
   mediaQuotaBytes: number;
   sessionDays: number;
   trustProxy: boolean;
+  /** ffmpeg program used to convert videos; null when videos are kept as sent. */
+  ffmpegPath: string | null;
 };
 
 export class EnvError extends Error {
@@ -98,6 +101,7 @@ export function parseEnv(raw: Record<string, string | undefined>): Env {
     mediaQuotaBytes: Math.floor(value.MEDIA_QUOTA_GB * BYTES_PER_GB),
     sessionDays: value.SESSION_DAYS,
     trustProxy: value.TRUST_PROXY === "true",
+    ffmpegPath: value.FFMPEG_PATH?.trim() || null,
   };
 }
 
