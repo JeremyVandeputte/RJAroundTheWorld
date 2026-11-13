@@ -15,7 +15,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/migrate.ts",
     "create-superuser": "tsx scripts/create-superuser.ts",
-    "backup": "tsx scripts/backup.ts"
+    "backup": "tsx scripts/backup.ts",
+    "icons": "tsx scripts/generate-icons.ts"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.2.2",

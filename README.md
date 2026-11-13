@@ -207,8 +207,20 @@ La cloche de l'en-tête indique le nombre de notifications non lues et mène à 
 - **Envoi de photos et vidéos** : par morceaux de 4 Mo. Après une coupure courte, le morceau en cours est renvoyé automatiquement (4 nouvelles tentatives). Après une coupure plus longue, l'envoi s'arrête avec un message, et « Reprendre l'envoi » repart d'où il s'était arrêté tant que la page reste ouverte.
 - **Formulaires** (entrée, commentaire…) envoyés sans réseau : un message « Connexion interrompue » s'affiche et tout ce qui a été saisi reste en place.
 - **Brouillon local d'une entrée** : pendant la rédaction (nouvelle entrée ou modification), ce qui est saisi est copié toutes les 2 secondes dans le navigateur de l'appareil, ainsi qu'au moment où l'on quitte l'application ou la page. Si la page est fermée, rechargée ou perdue avant l'enregistrement, la rouvrir affiche « Des modifications non enregistrées du … ont été retrouvées sur cet appareil », avec **Reprendre ces modifications** ou **Les ignorer**. Sont conservés : date, titre, texte, personnes, tags (y compris les nouveaux) et lieu ; pas les photos, qui s'envoient séparément. La copie est supprimée dès que l'entrée est enregistrée, et n'est pas proposée si elle est identique à ce qui est enregistré. Elle est propre à chaque compte, voyage et entrée, et ne quitte jamais l'appareil.
+- **Page ouverte sans connexion** : une page « Pas de connexion » remplace l'erreur du navigateur (voir « Installer l'application »).
 - **Erreur du serveur** : le message le dit, au lieu de parler de coupure, et invite à recharger la page pour vérifier si l'action a été enregistrée.
 - **Refus du serveur** (lieu manquant, par exemple) : le formulaire reste tel qu'il a été rempli.
+
+### Installer l'application
+
+Le site s'installe sur l'écran d'accueil d'un téléphone et s'ouvre alors en plein écran, comme une application, avec l'icône « RJ ». Il faut l'avoir ouvert une fois avec le lien secret, et être en `https` (en production) : les navigateurs ne proposent pas l'installation en `http`, sauf sur `localhost`.
+
+- **Android (Chrome)** : menu ⋮ > « Installer l'application » (ou « Ajouter à l'écran d'accueil »).
+- **iPhone (Safari)** : bouton Partager > « Sur l'écran d'accueil ».
+
+L'application démarre toujours par le lien secret, qui mène aussitôt à l'accueil : elle reçoit donc le cookie d'accès même quand elle ne partage pas les cookies du navigateur (cas de l'iPhone, où il faut alors se connecter une fois dans l'application). Le lien figure pour cela dans le manifeste de l'application, qui n'est lisible qu'avec le cookie du lien secret. Si `ACCESS_TOKEN` change, il faut réinstaller l'application.
+
+Si une page est ouverte sans aucune connexion, une page « Pas de connexion » s'affiche à la place de l'erreur du navigateur, avec « Réessayer ». Aucune page ni photo n'est gardée en cache sur l'appareil.
 
 ### Tester depuis un téléphone
 
@@ -234,6 +246,7 @@ Si le téléphone n'atteint pas le site, le pare-feu de l'ordinateur bloque prob
 
 - Toutes les saisies sont validées côté serveur. Les textes sont affichés comme du texte ; le seul balisage interprété est le gras et les liens `http`/`https` des entrées.
 - Les fichiers ne sont jamais servis par une adresse publique : `/api/media/<identifiant aléatoire>` applique les mêmes règles que la page de l'entrée, et répond 404 dans tous les autres cas. Le type d'un fichier est déterminé par son contenu, jamais par son nom.
+- Le service worker (`public/sw.js`), qui affiche la page « Pas de connexion », ne met rien en cache : pages, photos et vidéos viennent toujours du serveur, avec les mêmes contrôles d'accès. Le manifeste, les icônes et le service worker ne sont servis qu'avec le cookie du lien secret.
 - Le brouillon local d'une entrée reste dans le navigateur de l'appareil (`localStorage`) jusqu'à l'enregistrement ou « Les ignorer » ; il n'est pas effacé à la déconnexion. Sur un appareil partagé, enregistrer ou ignorer ses brouillons avant de le prêter.
 - Un voyage masqué, un brouillon ou une entrée retirée ne fuient nulle part : listes, carte, notifications, adresses directes et fichiers répondent comme s'ils n'existaient pas.
 
@@ -317,6 +330,7 @@ Crée une copie cohérente de la base, même pendant que le site tourne (`rjarou
 | `npm run typecheck` | Vérification des types TypeScript. |
 | `npm run create-superuser` | Création du superuser, ou nouveau mot de passe. |
 | `npm run backup` | Sauvegarde de la base. |
+| `npm run icons` | Régénère les icônes de l'application à partir du dessin de `scripts/generate-icons.ts`. |
 | `npm run db:migrate` | Applique les migrations (fait aussi automatiquement au démarrage). |
 | `npm run db:generate -- --name description` | Génère une migration après une modification de `src/server/db/schema.ts`. |
 
@@ -343,9 +357,10 @@ Les tests (Vitest) utilisent une base SQLite en mémoire avec les vraies migrati
 
 ```
 drizzle/                  migrations SQL
-scripts/                  scripts en ligne de commande (superuser, sauvegarde, migrations)
+scripts/                  scripts en ligne de commande (superuser, sauvegarde, migrations, icônes)
+public/                   icônes de l'application et service worker (sw.js)
 src/proxy.ts              contrôle d'accès et en-têtes appliqués à chaque requête
-src/app/                  pages (Next.js App Router)
+src/app/                  pages (Next.js App Router), manifeste (app.webmanifest/)
 src/app/api/              routes d'envoi et de lecture des médias
 src/components/           composants d'interface (map/ : carte et choix du lieu)
 src/lib/                  code partagé : configuration, textes, dates, rendu du texte
@@ -373,10 +388,10 @@ tests/                    tests automatisés
 Réalisé :
 
 - **Brouillon local** d'une entrée en cours de rédaction (voir « Connexion instable »).
+- **Application installable (PWA)**, avec une page « Pas de connexion » (voir « Installer l'application »).
 
 Pistes restantes :
 
-- **Application installable (PWA)** : les en-têtes l'autorisent déjà.
 - **Transcodage des vidéos** et compression plus poussée, par exemple pour lire les vidéos HEVC partout.
 - **Lieu tiré des coordonnées GPS des photos** : elles sont déjà enregistrées en base à l'envoi.
 - **Export d'un voyage** en PDF ou en archive.
