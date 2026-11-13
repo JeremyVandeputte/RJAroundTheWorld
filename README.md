@@ -142,6 +142,16 @@ Tout ce qui concerne les entrées, commentaires et réactions ne vaut que dans l
 - **Personnes identifiées** : n'importe quels comptes actifs du site.
 - **Tags** (facultatifs) : touchez les tags qui décrivent l'entrée (plage, randonnée…). Un tag absent de la liste se tape dans « Nouveau tag… » puis « Ajouter » ; il est créé à l'enregistrement. Deux noms qui ne diffèrent que par les majuscules ou les accents désignent le même tag. Sur la page de l'entrée, un tag mène au journal du voyage filtré sur ce tag.
 
+### Exporter un voyage
+
+Sur la page d'un voyage, « Télécharger le voyage (archive ZIP) » produit une archive `<voyage>.zip` contenant :
+
+- `index.html` : tout le voyage sur une seule page, lisible hors ligne dans n'importe quel navigateur (miniature, entrées de la plus ancienne à la plus récente, texte, lieux, personnes, tags, photos, vidéos et commentaires). Elle ne contacte aucun serveur ; les lieux sont des liens vers OpenStreetMap, ouverts seulement si on les touche. Pour un PDF, ouvrir cette page et choisir « Imprimer » puis « Enregistrer au format PDF » (les vidéos sont alors omises).
+- `media/` : les photos et vidéos telles qu'elles sont stockées sur le site, avec des noms lisibles (`2026-11-11-plage-des-salines.jpg`).
+- `journal.json` : le même contenu sous forme de données.
+
+L'archive contient exactement ce que la personne qui l'exporte peut voir : les entrées publiées (jamais les brouillons) et leurs commentaires. Tout compte qui peut voir le voyage peut l'exporter. L'archive est produite au fil du téléchargement, sans être construite d'abord sur le serveur ; les fichiers n'étant pas recompressés, elle pèse à peu près le poids des photos et vidéos du voyage. Au-delà de 4 Go, le format ZIP64 est utilisé (lu par Windows, macOS, Linux et 7-Zip).
+
 ### Filtres
 
 Le journal et la carte d'un voyage ont un bloc « Filtrer » :
@@ -376,6 +386,7 @@ src/server/services/      logique métier, couverte par les tests
 src/server/actions/       actions de formulaire (couche fine)
 src/server/auth/          lien secret, sessions, mots de passe, anti brute force, CSP
 src/server/media/         fichiers : envoi par morceaux, traitement des photos, stockage
+src/server/export/        export d'un voyage (archive ZIP écrite au fil de l'envoi)
 src/server/db/            schéma et connexion à la base
 tests/                    tests automatisés
 ```
@@ -400,8 +411,8 @@ Réalisé :
 - **Lieu tiré des coordonnées GPS des photos** (voir « Carte »).
 - **Carte de tous les voyages** (voir « Carte »).
 - **Recherche et statistiques** (voir « Recherche et statistiques »).
+- **Export d'un voyage** en archive ZIP, avec une page lisible hors ligne et imprimable en PDF (voir « Exporter un voyage »).
 
 Pistes restantes :
 
 - **Transcodage des vidéos** et compression plus poussée, par exemple pour lire les vidéos HEVC partout.
-- **Export d'un voyage** en PDF ou en archive.
