@@ -92,7 +92,8 @@ Pas d'inscription libre : seuls le script `create-superuser` et la page « Admin
 - **réinitialiser un mot de passe oublié** : nouveau mot de passe temporaire affiché une seule fois, sessions du compte fermées, blocage de connexion levé ;
 - **forcer un changement de mot de passe** sans toucher au mot de passe actuel ;
 - **désactiver ou réactiver** un compte : un compte désactivé est déconnecté partout et ne peut plus se connecter ;
-- **supprimer** un compte : ses commentaires et réactions sont supprimés (un commentaire qui a des réponses devient « Commentaire supprimé »). Un compte qui a écrit des entrées ne peut pas être supprimé : il faut le désactiver.
+- **supprimer** un compte : ses commentaires et réactions sont supprimés (un commentaire qui a des réponses devient « Commentaire supprimé »). Un compte qui a écrit des entrées ne peut pas être supprimé : il faut le désactiver ;
+- **gérer les tags** : en créer, les renommer (partout où ils sont utilisés) ou les supprimer (ils sont retirés des entrées).
 
 Le compte superuser ne peut être ni désactivé, ni supprimé, ni réinitialisé depuis cette page : son mot de passe se change dans « Mon profil » ou avec `npm run create-superuser`.
 
@@ -137,6 +138,16 @@ Tout ce qui concerne les entrées, commentaires et réactions ne vaut que dans l
 - Un auteur peut supprimer ses propres entrées ; le superuser peut modifier et supprimer toutes les entrées.
 - **Texte** : `**gras**` et `[texte du lien](https://…)` uniquement ; une adresse `https://…` collée telle quelle devient aussi un lien. Tout le reste s'affiche tel que saisi : aucun HTML n'est interprété, et seuls les liens `http` et `https` sont cliquables.
 - **Personnes identifiées** : n'importe quels comptes actifs du site.
+- **Tags** (facultatifs) : touchez les tags qui décrivent l'entrée (plage, randonnée…). Un tag absent de la liste se tape dans « Nouveau tag… » puis « Ajouter » ; il est créé à l'enregistrement. Deux noms qui ne diffèrent que par les majuscules ou les accents désignent le même tag. Sur la page de l'entrée, un tag mène au journal du voyage filtré sur ce tag.
+
+### Filtres
+
+Le journal et la carte d'un voyage ont un bloc « Filtrer » :
+
+- **Jour** : un jour parmi ceux qui ont des entrées.
+- **Tags** : un ou plusieurs ; une entrée est gardée si elle a au moins un des tags choisis.
+- Les filtres s'appliquent dès qu'on les change, s'affichent dans l'adresse de la page (`?jour=2026-11-14&tags=plage,randonnee`) et passent du journal à la carte. Une vue filtrée peut donc être rechargée ou envoyée à quelqu'un.
+- « Effacer les filtres » revient à toutes les entrées.
 
 ### Photos et vidéos
 
