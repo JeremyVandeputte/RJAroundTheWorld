@@ -18,7 +18,10 @@ export default async function HomePage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">Voyages</h1>
-        {canCreateTrip(viewer) ? <LinkButton href="/trips/new">Nouveau voyage</LinkButton> : null}
+        <div className="flex flex-wrap gap-3">
+          {trips.length > 0 ? <LinkButton href="/map">Carte de tous les voyages</LinkButton> : null}
+          {canCreateTrip(viewer) ? <LinkButton href="/trips/new">Nouveau voyage</LinkButton> : null}
+        </div>
       </div>
 
       {trips.length === 0 ? (

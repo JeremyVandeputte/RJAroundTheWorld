@@ -11,6 +11,12 @@ export type TripMapEntry = {
   title: string;
   pointA: LatLng & { name: string | null };
   pointB: (LatLng & { name: string | null }) | null;
+  /** Page of the entry; otherwise `${entryLinkBase}${id}`. */
+  href?: string;
+  /** Colour of its trip, on the map of all trips. */
+  color?: string;
+  /** Shown before the entry title in the marker tooltip (the trip, on the map of all trips). */
+  context?: string;
 };
 
 type TripMapProps = {
@@ -41,12 +47,14 @@ export function TripMap({ entries, entryLinkBase, className = "h-80", scrollWhee
       const shown: LatLng[] = [];
 
       for (const entry of entries) {
-        const open = entryLinkBase ? () => router.push(`${entryLinkBase}${entry.id}`) : undefined;
+        const href = entry.href ?? (entryLinkBase ? `${entryLinkBase}${entry.id}` : undefined);
+        const open = href ? () => router.push(href) : undefined;
+        const title = entry.context ? `${entry.context} · ${entry.title}` : entry.title;
         const addMarker = (point: LatLng & { name: string | null }, label: "" | "A" | "B") => {
           // `title` is set as an attribute, so entry titles are never parsed as HTML.
           const marker = L.marker([point.lat, point.lng], {
-            icon: pinIcon(L, label),
-            title: point.name ? `${entry.title} · ${point.name}` : entry.title,
+            icon: pinIcon(L, label, entry.color),
+            title: point.name ? `${title} · ${point.name}` : title,
             keyboard: true,
           }).addTo(map!);
           if (open) marker.on("click", open);
@@ -59,7 +67,7 @@ export function TripMap({ entries, entryLinkBase, className = "h-80", scrollWhee
               [entry.pointA.lat, entry.pointA.lng],
               [entry.pointB.lat, entry.pointB.lng],
             ],
-            { color: "#0f766e", weight: 3, opacity: 0.8 },
+            { color: entry.color ?? "#0f766e", weight: 3, opacity: 0.8 },
           ).addTo(map);
           addMarker(entry.pointA, "A");
           addMarker(entry.pointB, "B");

@@ -29,11 +29,15 @@ export function createBaseMap(L: LeafletModule, element: HTMLElement, options: L
   return map;
 }
 
-/** Round marker, optionally labelled "A" or "B". The label is never user input. */
-export function pinIcon(L: LeafletModule, label: "" | "A" | "B"): Leaflet.DivIcon {
+/**
+ * Round marker, optionally labelled "A" or "B", optionally in a trip's colour
+ * (a hexadecimal colour from TRIP_COLORS). Neither is ever user input.
+ */
+export function pinIcon(L: LeafletModule, label: "" | "A" | "B", color?: string): Leaflet.DivIcon {
+  const style = color && /^#[0-9a-f]{6}$/i.test(color) ? ` style="background-color:${color}"` : "";
   return L.divIcon({
     className: "",
-    html: `<span class="map-pin${label === "B" ? " map-pin--end" : ""}">${label}</span>`,
+    html: `<span class="map-pin${label === "B" ? " map-pin--end" : ""}"${style}>${label}</span>`,
     iconSize: [28, 28],
     iconAnchor: [14, 14],
   });
