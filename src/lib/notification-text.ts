@@ -4,9 +4,17 @@ import { REACTIONS } from "./reactions";
 // so that it can be tested on its own.
 
 export type NotificationTextInput = {
-  type: "entry_published" | "entry_comment" | "entry_reaction" | "comment_reply" | "comment_reaction";
+  type:
+    | "entry_published"
+    | "entry_comment"
+    | "entry_reaction"
+    | "comment_reply"
+    | "comment_reaction"
+    | "entry_tagged"
+    | "trip_revealed";
   actorName: string;
-  entryTitle: string;
+  /** Null for notifications about a whole trip. */
+  entryTitle: string | null;
   tripTitle: string;
   isOwnEntry: boolean;
   isTagged: boolean;
@@ -19,7 +27,8 @@ function quoted(text: string): string {
 }
 
 export function describeNotification(notification: NotificationTextInput): string {
-  const { actorName, entryTitle, tripTitle } = notification;
+  const { actorName, tripTitle } = notification;
+  const entryTitle = notification.entryTitle ?? "";
   const emoji = REACTIONS.find((reaction) => reaction.type === notification.reactionType)?.emoji ?? "";
   const reacted = emoji ? `a réagi ${emoji}` : "a réagi";
   const theEntry = notification.isOwnEntry
@@ -35,6 +44,10 @@ export function describeNotification(notification: NotificationTextInput): strin
       return `${actorName} ${reacted} à ${theEntry}.`;
     case "comment_reply":
       return `${actorName} a répondu à votre commentaire sur ${quoted(entryTitle)}.`;
+    case "entry_tagged":
+      return `${actorName} a indiqué votre présence dans ${quoted(entryTitle)}.`;
+    case "trip_revealed":
+      return `${actorName} a rendu visible le voyage ${quoted(tripTitle)}.`;
     case "comment_reaction":
       return `${actorName} ${reacted} à votre commentaire sur ${quoted(entryTitle)}.`;
   }

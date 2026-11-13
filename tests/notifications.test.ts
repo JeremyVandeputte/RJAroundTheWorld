@@ -15,7 +15,7 @@ import {
   markNotificationRead,
 } from "@/server/services/notifications";
 import { react } from "@/server/services/reactions";
-import { createTrip, updateTrip, type Trip } from "@/server/services/trips";
+import { createTrip, deleteTrip, updateTrip, type Trip } from "@/server/services/trips";
 import { entryInput, insertCast, insertUser, tripInput } from "./helpers/fixtures";
 import { createTestDb } from "./helpers/test-db";
 
@@ -62,6 +62,8 @@ beforeEach(() => {
   tripOwner = insertUser(db, "chloe", { canPublish: true, canManageTrips: true });
   paulette = insertUser(db, "paulette");
   trip = mustTrip(cast.superuser);
+  // Creating a visible trip announces it: start each test from an empty inbox.
+  clear();
 });
 
 describe("publishing an entry", () => {
@@ -95,12 +97,12 @@ describe("publishing an entry", () => {
 
   it("notifies only once: editing, unpublishing and publishing again send nothing new", () => {
     const entry = mustEntry("publish");
-    clear();
+    const before = sent();
     const input = entryInput({ peopleIds: [cast.guest.id] });
     updateEntry(db, cast.publisher, entry.id, input, "save");
     updateEntry(db, cast.publisher, entry.id, input, "unpublish");
     updateEntry(db, cast.publisher, entry.id, input, "publish");
-    expect(sent()).toEqual([]);
+    expect(sent()).toEqual(before);
   });
 
   it("in a hidden trip, notifies only its creator and the superuser", () => {
@@ -280,7 +282,8 @@ describe("visibility of notifications", () => {
     expect(markNotificationRead(db, cast.guest, id)).toEqual({ ok: false, reason: "not_found" });
 
     updateTrip(db, cast.superuser, trip.id, tripInput({ isVisible: true }));
-    expect(inbox(cast.guest).map((notice) => notice.entryTitle)).toEqual([entry.title]);
+    const aboutEntries = inbox(cast.guest).filter((notice) => notice.type !== "trip_revealed");
+    expect(aboutEntries.map((notice) => notice.entryTitle)).toEqual([entry.title]);
   });
 
   it("disappear while the entry is unpublished", () => {
@@ -354,5 +357,139 @@ describe("reading notifications", () => {
     expect(countUnreadNotifications(db, cast.guest)).toBe(0);
     expect(countUnreadNotifications(db, cast.otherPublisher)).toBe(2);
     expect(markAllNotificationsRead(db, null)).toBe(0);
+  });
+});
+
+describe("being identified after publication", () => {
+  let entry: Entry;
+  const edit = (actor: Actor, peopleIds: number[], intent: "save" | "unpublish" | "publish" = "save") =>
+    updateEntry(db, actor, entry.id, entryInput({ peopleIds }), intent);
+
+  beforeEach(() => {
+    entry = mustEntry("publish", { peopleIds: [cast.guest.id] });
+  });
+
+  it("notifies a person added to a published entry", () => {
+    const before = sent();
+    edit(cast.publisher, [cast.guest.id, paulette.id]);
+    expect(sent()).toEqual([...before, "paulette:entry_tagged"].sort());
+    const [notice] = inbox(paulette);
+    expect(notice?.href).toBe(`/trips/${trip.slug}/entries/${entry.id}`);
+    expect(sentence(notice!)).toBe("romane a indiqué votre présence dans « Première baignade ».");
+  });
+
+  it("does not notify again people already told, by the publication or earlier", () => {
+    edit(cast.publisher, [cast.guest.id, paulette.id]);
+    const before = sent();
+    edit(cast.publisher, [cast.guest.id, paulette.id]); // nobody new
+    edit(cast.publisher, [cast.guest.id]); // paulette removed...
+    edit(cast.publisher, [cast.guest.id, paulette.id]); // ...and added back
+    expect(sent()).toEqual(before);
+  });
+
+  it("notifies people added while the entry was withdrawn, once it is published again", () => {
+    edit(cast.publisher, [cast.guest.id], "unpublish");
+    edit(cast.publisher, [cast.guest.id, paulette.id]);
+    expect(sent()).not.toContain("paulette:entry_tagged");
+    edit(cast.publisher, [cast.guest.id, paulette.id], "publish");
+    expect(sent()).toContain("paulette:entry_tagged");
+  });
+
+  it("never notifies the person making the change, nor the author", () => {
+    const before = sent();
+    edit(cast.superuser, [cast.guest.id, cast.superuser.id, cast.publisher.id]);
+    expect(sent()).toEqual(before);
+  });
+
+  it("respects hidden trips", () => {
+    const hidden = mustTrip(tripOwner, { title: "Caché", isVisible: false });
+    const secret = mustEntry("publish", { peopleIds: [tripOwner.id] }, tripOwner, hidden);
+    const before = sent();
+    updateEntry(db, tripOwner, secret.id, entryInput({ peopleIds: [paulette.id, cast.superuser.id] }), "save");
+    expect(sent()).toEqual([...before, "admin:entry_tagged"].sort());
+  });
+
+  it("goes away when the person is no longer identified", () => {
+    edit(cast.publisher, [cast.guest.id, paulette.id]);
+    expect(inbox(paulette).map((notice) => notice.type)).toEqual(["entry_tagged", "entry_published"]);
+    edit(cast.publisher, [cast.guest.id]);
+    expect(inbox(paulette).map((notice) => notice.type)).toEqual(["entry_published"]);
+  });
+
+  it("reflects the current identification in other notifications", () => {
+    mustComment(cast.otherPublisher, entry, "Avis");
+    expect(inbox(cast.guest)[0]?.isTagged).toBe(true);
+    edit(cast.publisher, [paulette.id]);
+    // Marie is no longer identified: her earlier notices no longer say she is.
+    expect(inbox(cast.guest).every((notice) => !notice.isTagged)).toBe(true);
+  });
+});
+
+describe("a trip becoming visible", () => {
+  let hidden: Trip;
+  const reveal = (actor: Actor, isVisible = true) => updateTrip(db, actor, hidden.id, tripInput({ title: "Surprise", isVisible }));
+
+  beforeEach(() => {
+    hidden = mustTrip(tripOwner, { title: "Surprise", isVisible: false });
+  });
+
+  it("notifies nobody while it is hidden", () => {
+    expect(sent()).toEqual([]);
+  });
+
+  it("notifies everyone who can now see it, except the person who revealed it", () => {
+    reveal(tripOwner);
+    expect(sent()).toEqual(
+      ["admin", "lucie", "marie", "paul", "paulette", "romane"].map((name) => `${name}:trip_revealed`),
+    );
+    const [notice] = inbox(cast.guest);
+    expect(notice).toMatchObject({ type: "trip_revealed", entryTitle: null, tripTitle: "Surprise" });
+    expect(notice?.href).toBe(`/trips/${hidden.slug}`);
+    expect(sentence(notice!)).toBe("chloe a rendu visible le voyage « Surprise ».");
+  });
+
+  it("is announced only once, even if the trip is hidden and revealed again", () => {
+    reveal(cast.superuser);
+    const before = sent();
+    reveal(cast.superuser, false);
+    reveal(cast.superuser);
+    expect(sent()).toEqual(before);
+  });
+
+  it("disappears while the trip is hidden again", () => {
+    reveal(tripOwner);
+    reveal(tripOwner, false);
+    expect(inbox(cast.guest)).toEqual([]);
+    expect(countUnreadNotifications(db, cast.guest)).toBe(0);
+    // The superuser can still see the trip: the notice stays for them.
+    expect(inbox(cast.superuser).map((notice) => notice.type)).toEqual(["trip_revealed"]);
+  });
+
+  it("does not notify when other details of a visible trip change", () => {
+    reveal(tripOwner);
+    const before = sent();
+    updateTrip(db, tripOwner, hidden.id, tripInput({ title: "Nouveau titre", isVisible: true }));
+    expect(sent()).toEqual(before);
+  });
+
+  it("applies to a trip created directly visible", () => {
+    mustTrip(cast.manager, { title: "Tout de suite" });
+    expect(sent()).toHaveLength(6);
+    expect(sent()).not.toContain("lucie:trip_revealed");
+  });
+
+  it("skips deactivated accounts and is deleted with the trip", () => {
+    db.update(users).set({ isActive: false }).where(eq(users.id, paulette.id)).run();
+    reveal(tripOwner);
+    expect(sent()).not.toContain("paulette:trip_revealed");
+    deleteTrip(db, tripOwner, hidden.id);
+    expect(sent()).toEqual([]);
+  });
+
+  it("can be opened and marked as read", () => {
+    reveal(tripOwner);
+    const [notice] = inbox(cast.guest);
+    expect(markNotificationRead(db, cast.guest, notice!.id)).toEqual({ ok: true, href: `/trips/${hidden.slug}` });
+    expect(countUnreadNotifications(db, cast.guest)).toBe(0);
   });
 });

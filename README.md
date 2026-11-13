@@ -118,15 +118,17 @@ Une cloche dans l'en-tête indique le nombre de notifications non lues ; elle m�
 | Événement | Qui est notifié |
 |---|---|
 | Première publication d'une entrée | Toutes les personnes qui peuvent la voir, sauf son auteur ; mention « Vous apparaissez dans cette entrée » pour les personnes identifiées |
+| Personne identifiée après la publication (ou pendant que l'entrée était retirée) | Cette personne, une seule fois |
 | Commentaire sur une entrée | L'auteur de l'entrée et les personnes identifiées |
 | Réaction à une entrée | L'auteur de l'entrée et les personnes identifiées |
 | Réponse à un commentaire (ou à une réponse) | L'auteur du commentaire auquel on répond |
 | Réaction à un commentaire ou à une réponse | Son auteur |
+| Voyage rendu visible (ou créé directement visible) | Toutes les personnes qui peuvent désormais le voir, une seule fois par voyage |
 
 - **Jamais à soi-même** : la personne qui agit n'est jamais notifiée.
 - **Voyage non visible** : seules les personnes qui y ont accès (son auteur et le superuser) sont notifiées. Une personne identifiée dans une entrée d'un voyage masqué n'est pas notifiée.
 - **Pas de doublon** : retirer puis republier une entrée ne renotifie pas ; changer de réaction met à jour la notification existante ; retirer sa réaction supprime la notification.
-- **Toujours à jour** : une notification disparaît si son objet n'est plus visible (voyage masqué, entrée retirée, commentaire supprimé) et réapparaît s'il le redevient.
+- **Toujours à jour** : une notification disparaît si son objet n'est plus visible (voyage masqué, entrée retirée, commentaire supprimé, personne retirée de l'entrée) et réapparaît s'il le redevient. La mention « vous apparaissez » suit les personnes identifiées actuellement.
 - **Lecture** : toucher une notification mène directement à l'entrée ou au commentaire concerné et la marque comme lue. « Marquer comme lue » et « Tout marquer comme lu » marquent sans quitter la page. Les 100 notifications les plus récentes sont affichées.
 
 ## Connexion instable

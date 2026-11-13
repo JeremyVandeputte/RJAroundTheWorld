@@ -3,7 +3,7 @@ import { isValidDateString } from "@/lib/dates";
 import type { Db } from "@/server/db/client";
 import { entries, entryPeople, trips, users, type EntryStatus } from "@/server/db/schema";
 import { canCreateEntry, canEditEntry, canViewEntry, canViewTrip, canWriteEntries, type Actor } from "@/server/permissions";
-import { notifyEntryPublished } from "./notifications";
+import { notifyEntryPublished, notifyNewlyTagged } from "./notifications";
 import type { Trip } from "./trips";
 
 export type Entry = typeof entries.$inferSelect;
@@ -240,6 +240,8 @@ export function updateEntry(
     // Only the first publication notifies: unpublishing and publishing again does not.
     const isFirstPublication = found.entry.publishedAt === null && status === "published";
     if (updated && actor && isFirstPublication) notifyEntryPublished(tx as unknown as Db, actor.id, found.trip, updated, now);
+    // People identified after the first publication are told separately.
+    else if (updated && actor) notifyNewlyTagged(tx as unknown as Db, actor.id, found.trip, updated, now);
     return updated;
   });
   return entry ? { ok: true, entry, trip: found.trip } : { ok: false, reason: "not_found" };

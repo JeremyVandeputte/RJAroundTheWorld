@@ -4,6 +4,7 @@ import { slugify } from "@/lib/slug";
 import type { Db } from "@/server/db/client";
 import { entries, trips, users } from "@/server/db/schema";
 import { canCreateTrip, canEditTrip, canViewTrip, type Actor } from "@/server/permissions";
+import { notifyTripRevealed } from "./notifications";
 
 export type Trip = typeof trips.$inferSelect;
 
@@ -83,19 +84,24 @@ export function createTrip(db: Db, actor: Actor, input: TripInput): SaveTripResu
   const issue = validate(input);
   if (issue) return { ok: false, reason: issue };
 
-  const trip = db
-    .insert(trips)
-    .values({
-      authorId: actor.id,
-      slug: uniqueSlug(db, input.title),
-      title: input.title.trim(),
-      description: input.description.trim(),
-      startDate: input.startDate,
-      endDate: input.endDate,
-      isVisible: input.isVisible,
-    })
-    .returning()
-    .get();
+  const trip = db.transaction((tx) => {
+    const created = tx
+      .insert(trips)
+      .values({
+        authorId: actor.id,
+        slug: uniqueSlug(tx as unknown as Db, input.title),
+        title: input.title.trim(),
+        description: input.description.trim(),
+        startDate: input.startDate,
+        endDate: input.endDate,
+        isVisible: input.isVisible,
+      })
+      .returning()
+      .get();
+    // A trip created visible is announced like a trip revealed.
+    notifyTripRevealed(tx as unknown as Db, actor.id, created);
+    return created;
+  });
   return { ok: true, trip };
 }
 
@@ -117,18 +123,23 @@ export function updateTrip(db: Db, actor: Actor, tripId: number, input: TripInpu
   const issue = validate(input);
   if (issue) return { ok: false, reason: issue };
 
-  const trip = db
-    .update(trips)
-    .set({
-      title: input.title.trim(),
-      description: input.description.trim(),
-      startDate: input.startDate,
-      endDate: input.endDate,
-      isVisible: input.isVisible,
-    })
-    .where(eq(trips.id, tripId))
-    .returning()
-    .get();
+  const trip = db.transaction((tx) => {
+    const updated = tx
+      .update(trips)
+      .set({
+        title: input.title.trim(),
+        description: input.description.trim(),
+        startDate: input.startDate,
+        endDate: input.endDate,
+        isVisible: input.isVisible,
+      })
+      .where(eq(trips.id, tripId))
+      .returning()
+      .get();
+    const isRevealed = !found.trip.isVisible && updated?.isVisible;
+    if (updated && actor && isRevealed) notifyTripRevealed(tx as unknown as Db, actor.id, updated);
+    return updated;
+  });
   return trip ? { ok: true, trip } : { ok: false, reason: "trip_not_found" };
 }
 

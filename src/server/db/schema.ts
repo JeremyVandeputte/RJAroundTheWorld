@@ -21,6 +21,8 @@ export const NOTIFICATION_TYPES = [
   "entry_reaction",
   "comment_reply",
   "comment_reaction",
+  "entry_tagged",
+  "trip_revealed",
 ] as const;
 
 export type UserRole = (typeof USER_ROLES)[number];
@@ -248,10 +250,12 @@ export const notifications = sqliteTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     type: text("type", { enum: NOTIFICATION_TYPES }).notNull(),
-    /** Always set: gives the link target and the trip used for visibility checks. */
-    entryId: integer("entry_id")
+    /** Always set: the trip used for visibility checks (and the link target of `trip_revealed`). */
+    tripId: integer("trip_id")
       .notNull()
-      .references(() => entries.id, { onDelete: "cascade" }),
+      .references(() => trips.id, { onDelete: "cascade" }),
+    /** The entry concerned: set for every type except `trip_revealed`. */
+    entryId: integer("entry_id").references(() => entries.id, { onDelete: "cascade" }),
     commentId: integer("comment_id").references(() => comments.id, { onDelete: "cascade" }),
     /** The recipient is identified in the entry (and is not its author). */
     isTagged: integer("is_tagged", { mode: "boolean" }).notNull().default(false),

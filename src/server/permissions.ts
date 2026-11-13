@@ -137,3 +137,13 @@ export function canReact(actor: Actor, trip: TripAccess, entry: EntryAccess): bo
 export function canBeNotifiedAbout(recipient: PermissionUser, trip: TripAccess, entry: EntryAccess): boolean {
   return canViewSocial({ ...recipient, mustChangePassword: false }, trip, entry);
 }
+
+/** Same as `canBeNotifiedAbout`, for a notification about a trip as a whole. */
+export function canBeNotifiedAboutTrip(recipient: PermissionUser, trip: TripAccess): boolean {
+  return recipient.isActive && canViewTrip({ ...recipient, mustChangePassword: false }, trip);
+}
+
+/** Notifications are only shown to logged-in users, about trips they can see. */
+export function canReadTripNotification(actor: Actor, trip: TripAccess): boolean {
+  return effectiveUser(actor) !== null && canViewTrip(actor, trip);
+}
