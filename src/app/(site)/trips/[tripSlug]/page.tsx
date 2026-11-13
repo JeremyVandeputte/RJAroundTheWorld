@@ -2,27 +2,35 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { TagList } from "@/components/tags/tag-list";
+import { TripFiltersForm } from "@/components/trips/trip-filters";
 import { Badge } from "@/components/ui/badge";
 import { LinkButton } from "@/components/ui/link-button";
 import { formatDate, formatDateRange } from "@/lib/dates";
 import { thumbnailUrl } from "@/lib/media-url";
+import { filtersToQuery, hasActiveFilters, parseTripFilters } from "@/lib/trip-filters";
 import { getDb } from "@/server/db/client";
 import { loadTrip } from "@/server/page-data";
 import { canCreateEntry, canEditTrip } from "@/server/permissions";
-import { listEntries } from "@/server/services/entries";
+import { listEntries, listTripFilterOptions } from "@/server/services/entries";
 import { listCoverPhotos } from "@/server/services/media";
 
-type TripPageProps = { params: Promise<{ tripSlug: string }> };
+type TripPageProps = {
+  params: Promise<{ tripSlug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
 
 export async function generateMetadata({ params }: TripPageProps): Promise<Metadata> {
   const { trip } = await loadTrip((await params).tripSlug);
   return trip ? { title: trip.title } : {};
 }
 
-export default async function TripPage({ params }: TripPageProps) {
+export default async function TripPage({ params, searchParams }: TripPageProps) {
   const { viewer, trip } = await loadTrip((await params).tripSlug);
   if (!trip) notFound();
-  const entries = listEntries(getDb(), viewer, trip);
+  const filters = parseTripFilters(await searchParams);
+  const options = listTripFilterOptions(getDb(), viewer, trip);
+  const entries = listEntries(getDb(), viewer, trip, filters);
+  const isFiltered = hasActiveFilters(filters);
   // Covers are looked up only for the entries this viewer is allowed to see.
   const covers = listCoverPhotos(
     getDb(),
@@ -44,7 +52,7 @@ export default async function TripPage({ params }: TripPageProps) {
       </div>
 
       <div className="flex flex-wrap gap-3">
-        <LinkButton href={`/trips/${trip.slug}/map`}>Carte</LinkButton>
+        <LinkButton href={`/trips/${trip.slug}/map${filtersToQuery(filters)}`}>Carte</LinkButton>
         {canCreateEntry(viewer, trip) ? (
           <LinkButton href={`/trips/${trip.slug}/entries/new`} variant="primary">
             Nouvelle entrée
@@ -53,11 +61,23 @@ export default async function TripPage({ params }: TripPageProps) {
         {canEditTrip(viewer, trip) ? <LinkButton href={`/trips/${trip.slug}/edit`}>Modifier le voyage</LinkButton> : null}
       </div>
 
+      <TripFiltersForm
+        // Remount when the address changes, so the controls match the filters applied.
+        key={filtersToQuery(filters)}
+        basePath={`/trips/${trip.slug}`} days={options.days} tags={options.tags} filters={filters} />
+
       <section aria-labelledby="entries-title">
         <h2 id="entries-title" className="text-lg font-semibold">
           Journal
+          {isFiltered ? (
+            <span className="ml-2 text-sm font-normal text-muted">
+              {entries.length} entrée{entries.length > 1 ? "s" : ""} sur {options.total}
+            </span>
+          ) : null}
         </h2>
-        {entries.length === 0 ? (
+        {entries.length === 0 && isFiltered ? (
+          <p className="mt-2 text-muted">Aucune entrée ne correspond à ces filtres.</p>
+        ) : entries.length === 0 ? (
           <p className="mt-2 text-muted">Aucune entrée pour le moment.</p>
         ) : (
           <ul className="mt-3 space-y-3">

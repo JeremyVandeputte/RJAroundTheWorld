@@ -4,10 +4,13 @@ import type { Db } from "@/server/db/client";
 import { entries, entryPeople, trips, users, type EntryStatus } from "@/server/db/schema";
 import { canCreateEntry, canEditEntry, canViewEntry, canViewTrip, canWriteEntries, type Actor } from "@/server/permissions";
 import { notifyEntryPublished, notifyNewlyTagged } from "./notifications";
+import { matchesFilters, type TripFilters } from "@/lib/trip-filters";
 import { ensureTags, isValidTagName, setEntryTags, tagsExist, tagsOfEntries, type Tag } from "./tags";
 import type { Trip } from "./trips";
 
 export type Entry = typeof entries.$inferSelect;
+
+const NO_FILTERS: TripFilters = { date: null, tagSlugs: [] };
 export type Person = { id: number; displayName: string };
 
 export const ENTRY_TITLE_MAX_LENGTH = 150;
@@ -55,7 +58,7 @@ export type EntryListItem = Pick<Entry, "id" | "date" | "title" | "status" | "au
 export type EntryDetail = { entry: Entry; author: Person; people: Person[]; tags: Tag[] };
 
 /** Entries of a trip the actor may see, most recent day first. */
-export function listEntries(db: Db, actor: Actor, trip: Trip): EntryListItem[] {
+export function listEntries(db: Db, actor: Actor, trip: Trip, filters: TripFilters = NO_FILTERS): EntryListItem[] {
   if (!canViewTrip(actor, trip)) return [];
   const visible = db
     .select({
@@ -73,7 +76,28 @@ export function listEntries(db: Db, actor: Actor, trip: Trip): EntryListItem[] {
     .all()
     .filter((entry) => canViewEntry(actor, trip, entry));
   const tagsByEntry = tagsOfEntries(db, visible.map((entry) => entry.id));
-  return visible.map((entry) => ({ ...entry, tags: tagsByEntry.get(entry.id) ?? [] }));
+  return visible
+    .map((entry) => ({ ...entry, tags: tagsByEntry.get(entry.id) ?? [] }))
+    .filter((entry) => matchesFilters(filters, { date: entry.date, tagSlugs: entry.tags.map((tag) => tag.slug) }));
+}
+
+export type TripFilterOptions = {
+  /** Days that have at least one entry the actor can see, most recent first. */
+  days: string[];
+  /** Tags used by those entries, alphabetically. */
+  tags: Tag[];
+  /** Number of entries the actor can see, before filtering. */
+  total: number;
+};
+
+/** What the filters of a trip can offer: only days and tags actually used. */
+export function listTripFilterOptions(db: Db, actor: Actor, trip: Trip): TripFilterOptions {
+  const visible = listEntries(db, actor, trip);
+  const days = [...new Set(visible.map((entry) => entry.date))];
+  const tagsBySlug = new Map<string, Tag>();
+  for (const entry of visible) for (const tag of entry.tags) tagsBySlug.set(tag.slug, tag);
+  const tags = [...tagsBySlug.values()].sort((a, b) => a.name.localeCompare(b.name, "fr", { sensitivity: "base" }));
+  return { days, tags, total: visible.length };
 }
 
 /** An entry the actor cannot see is reported exactly like one that does not exist. */
@@ -285,15 +309,20 @@ export type MapEntry = Pick<Entry, "id" | "title" | "date"> & { pointA: MapPoint
  * Places shown on a trip's map: one or two points per published entry the
  * actor may see. Drafts never appear on the map, even for their author.
  */
-export function listTripMapEntries(db: Db, actor: Actor, trip: Trip): MapEntry[] {
+export function listTripMapEntries(db: Db, actor: Actor, trip: Trip, filters: TripFilters = NO_FILTERS): MapEntry[] {
   if (!canViewTrip(actor, trip)) return [];
-  return db
+  const published = db
     .select()
     .from(entries)
     .where(and(eq(entries.tripId, trip.id), eq(entries.status, "published")))
     .orderBy(asc(entries.date), asc(entries.id))
     .all()
-    .filter((entry) => canViewEntry(actor, trip, entry))
+    .filter((entry) => canViewEntry(actor, trip, entry));
+  const tagsByEntry = tagsOfEntries(db, published.map((entry) => entry.id));
+  return published
+    .filter((entry) =>
+      matchesFilters(filters, { date: entry.date, tagSlugs: (tagsByEntry.get(entry.id) ?? []).map((tag) => tag.slug) }),
+    )
     .flatMap((entry) => {
       if (entry.pointALat === null || entry.pointALng === null) return [];
       const pointB =

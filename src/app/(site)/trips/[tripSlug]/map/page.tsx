@@ -2,34 +2,47 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { TripMap } from "@/components/map/trip-map";
+import { TripFiltersForm } from "@/components/trips/trip-filters";
+import { filtersToQuery, hasActiveFilters, parseTripFilters } from "@/lib/trip-filters";
 import { getDb } from "@/server/db/client";
 import { loadTrip } from "@/server/page-data";
-import { listTripMapEntries } from "@/server/services/entries";
+import { listTripFilterOptions, listTripMapEntries } from "@/server/services/entries";
 
-type TripMapPageProps = { params: Promise<{ tripSlug: string }> };
+type TripMapPageProps = {
+  params: Promise<{ tripSlug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
 
 export async function generateMetadata({ params }: TripMapPageProps): Promise<Metadata> {
   const { trip } = await loadTrip((await params).tripSlug);
   return trip ? { title: `Carte · ${trip.title}` } : {};
 }
 
-export default async function TripMapPage({ params }: TripMapPageProps) {
+export default async function TripMapPage({ params, searchParams }: TripMapPageProps) {
   const { viewer, trip } = await loadTrip((await params).tripSlug);
   if (!trip) notFound();
+  const filters = parseTripFilters(await searchParams);
+  const options = listTripFilterOptions(getDb(), viewer, trip);
   // Only published entries this viewer may see are sent to the browser.
-  const entries = listTripMapEntries(getDb(), viewer, trip);
+  const entries = listTripMapEntries(getDb(), viewer, trip, filters);
 
   return (
     <div className="space-y-4">
       <div>
-        <Link href={`/trips/${trip.slug}`} className="text-sm text-accent underline-offset-4 hover:underline">
+        <Link href={`/trips/${trip.slug}${filtersToQuery(filters)}`} className="text-sm text-accent underline-offset-4 hover:underline">
           ← {trip.title}
         </Link>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight">Carte</h1>
       </div>
 
+      <TripFiltersForm
+        key={filtersToQuery(filters)}
+        basePath={`/trips/${trip.slug}/map`} days={options.days} tags={options.tags} filters={filters} />
+
       {entries.length === 0 ? (
-        <p className="text-muted">Aucun lieu à afficher pour le moment.</p>
+        <p className="text-muted">
+          {hasActiveFilters(filters) ? "Aucun lieu ne correspond à ces filtres." : "Aucun lieu à afficher pour le moment."}
+        </p>
       ) : (
         <>
           <p className="text-sm text-muted">Touchez un marqueur pour ouvrir l&apos;entrée correspondante.</p>
