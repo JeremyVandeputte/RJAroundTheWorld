@@ -4,6 +4,7 @@ import "leaflet/dist/leaflet.css";
 import type * as Leaflet from "leaflet";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
+import type { TripColor } from "@/lib/map-colors";
 import { createBaseMap, fitToPoints, loadLeaflet, pinIcon, type LatLng } from "./leaflet-setup";
 
 export type TripMapEntry = {
@@ -14,7 +15,7 @@ export type TripMapEntry = {
   /** Page of the entry; otherwise `${entryLinkBase}${id}`. */
   href?: string;
   /** Colour of its trip, on the map of all trips. */
-  color?: string;
+  color?: TripColor;
   /** Shown before the entry title in the marker tooltip (the trip, on the map of all trips). */
   context?: string;
 };
@@ -67,7 +68,7 @@ export function TripMap({ entries, entryLinkBase, className = "h-80", scrollWhee
               [entry.pointA.lat, entry.pointA.lng],
               [entry.pointB.lat, entry.pointB.lng],
             ],
-            { color: entry.color ?? "#0f766e", weight: 3, opacity: 0.8 },
+            { color: entry.color?.fill ?? "#0f766e", weight: 3, opacity: 0.8 },
           ).addTo(map);
           addMarker(entry.pointA, "A");
           addMarker(entry.pointB, "B");

@@ -47,7 +47,7 @@ export default async function GlobalMapPage() {
                   href={`/trips/${trip.slug}/map`}
                   className="flex min-h-11 items-center gap-3 rounded-md px-1 hover:bg-white"
                 >
-                  <span aria-hidden="true" className="size-4 shrink-0 rounded-full" style={{ backgroundColor: colorOf(index) }} />
+                  <span aria-hidden="true" className="size-4 shrink-0 rounded-full" style={{ backgroundColor: colorOf(index).fill }} />
                   <span className="min-w-0 flex-1">
                     <span className="font-medium">{trip.title}</span>{" "}
                     <span className="text-sm text-muted">

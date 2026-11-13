@@ -70,3 +70,14 @@ export function parseRichText(source: string): RichParagraph[] {
     .filter((paragraph) => paragraph.length > 0)
     .map((paragraph) => paragraph.split("\n").map((line) => parseInline(line, true)));
 }
+
+function inlineText(nodes: InlineNode[]): string {
+  return nodes.map((node) => (node.type === "bold" ? inlineText(node.children) : node.text)).join("");
+}
+
+/** The text as read, without markup: for excerpts (search results). */
+export function plainText(source: string): string {
+  return parseRichText(source)
+    .map((paragraph) => paragraph.map(inlineText).join(" "))
+    .join(" ");
+}

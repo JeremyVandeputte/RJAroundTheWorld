@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { SearchForm } from "@/components/search/search-form";
 import { LinkButton } from "@/components/ui/link-button";
 import { formatDateRange } from "@/lib/dates";
 import { thumbnailUrl } from "@/lib/media-url";
@@ -18,11 +19,18 @@ export default async function HomePage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">Voyages</h1>
-        <div className="flex flex-wrap gap-3">
-          {trips.length > 0 ? <LinkButton href="/map">Carte de tous les voyages</LinkButton> : null}
-          {canCreateTrip(viewer) ? <LinkButton href="/trips/new">Nouveau voyage</LinkButton> : null}
-        </div>
+        {canCreateTrip(viewer) ? <LinkButton href="/trips/new">Nouveau voyage</LinkButton> : null}
       </div>
+
+      {trips.length > 0 ? (
+        <div className="space-y-3">
+          <SearchForm />
+          <div className="flex flex-wrap gap-3">
+            <LinkButton href="/map">Carte de tous les voyages</LinkButton>
+            <LinkButton href="/stats">Statistiques</LinkButton>
+          </div>
+        </div>
+      ) : null}
 
       {trips.length === 0 ? (
         <p className="text-muted">Aucun voyage pour le moment.</p>

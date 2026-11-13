@@ -1,4 +1,5 @@
 import type * as Leaflet from "leaflet";
+import type { TripColor } from "@/lib/map-colors";
 
 export type LeafletModule = typeof Leaflet;
 export type LatLng = { lat: number; lng: number };
@@ -29,12 +30,17 @@ export function createBaseMap(L: LeafletModule, element: HTMLElement, options: L
   return map;
 }
 
+const HEX_COLOR = /^#[0-9a-f]{6}$/i;
+
 /**
  * Round marker, optionally labelled "A" or "B", optionally in a trip's colour
- * (a hexadecimal colour from TRIP_COLORS). Neither is ever user input.
+ * (from TRIP_COLORS). Neither is ever user input.
  */
-export function pinIcon(L: LeafletModule, label: "" | "A" | "B", color?: string): Leaflet.DivIcon {
-  const style = color && /^#[0-9a-f]{6}$/i.test(color) ? ` style="background-color:${color}"` : "";
+export function pinIcon(L: LeafletModule, label: "" | "A" | "B", color?: TripColor): Leaflet.DivIcon {
+  const style =
+    color && HEX_COLOR.test(color.fill) && HEX_COLOR.test(color.label)
+      ? ` style="background-color:${color.fill};color:${color.label}"`
+      : "";
   return L.divIcon({
     className: "",
     html: `<span class="map-pin${label === "B" ? " map-pin--end" : ""}"${style}>${label}</span>`,

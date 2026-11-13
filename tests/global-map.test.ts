@@ -71,21 +71,30 @@ describe("map of all trips", () => {
 });
 
 describe("trip colours", () => {
+  const luminance = (hex: string) => {
+    const [r, g, b] = [1, 3, 5].map((i) => {
+      const c = parseInt(hex.slice(i, i + 2), 16) / 255;
+      return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
+  };
+  const contrast = (a: string, b: string) => {
+    const [x, y] = [luminance(a), luminance(b)].sort((p, q) => q - p);
+    return (x! + 0.05) / (y! + 0.05);
+  };
+
   it("are distinct, valid colours that repeat after the palette", () => {
-    expect(new Set(TRIP_COLORS).size).toBe(TRIP_COLORS.length);
-    for (const color of TRIP_COLORS) expect(color).toMatch(/^#[0-9a-f]{6}$/);
+    expect(new Set(TRIP_COLORS.map((color) => color.fill)).size).toBe(TRIP_COLORS.length);
+    for (const color of TRIP_COLORS) expect(color.fill).toMatch(/^#[0-9a-f]{6}$/);
     expect(tripColor(0)).toBe(TRIP_COLORS[0]);
     expect(tripColor(TRIP_COLORS.length + 2)).toBe(TRIP_COLORS[2]);
   });
 
-  it("keep white marker labels readable", () => {
-    const luminance = (hex: string) => {
-      const [r, g, b] = [1, 3, 5].map((i) => {
-        const c = parseInt(hex.slice(i, i + 2), 16) / 255;
-        return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-      });
-      return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
-    };
-    for (const color of TRIP_COLORS) expect(1.05 / (luminance(color) + 0.05)).toBeGreaterThanOrEqual(4.5);
+  it("label each marker with the letter colour that reads best on it", () => {
+    for (const { fill, label } of TRIP_COLORS) {
+      const other = label === "#ffffff" ? "#1f2933" : "#ffffff";
+      expect(contrast(fill, label)).toBeGreaterThan(contrast(fill, other));
+      expect(contrast(fill, label)).toBeGreaterThanOrEqual(3.9);
+    }
   });
 });

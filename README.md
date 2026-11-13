@@ -171,9 +171,14 @@ La carte utilise Leaflet (inclus dans le site, aucun CDN) et les fonds de carte 
 - **Lieu tiré des photos** : quand des photos de l'entrée contiennent une position GPS, elles apparaissent en vignettes au-dessus de la carte (« Position des photos »), de la plus ancienne à la plus récente. Toucher une vignette place le point en cours (le lieu, ou le point B s'il est sélectionné) là où la photo a été prise. « Trajet de la première à la dernière photo » place A et B d'un coup. Les photos envoyées apparaissent aussitôt, sans recharger la page. Ces positions ne sont montrées qu'à qui peut modifier l'entrée ; les fichiers des photos restent servis sans aucune donnée GPS.
 - **Centrer sur ma position** : n'apparaît qu'en `https` (ou sur `localhost`), car les navigateurs n'autorisent la localisation que sur une connexion sécurisée. Centre la carte, sans placer de point.
 - **Carte du voyage** : bouton « Carte » sur la page du voyage. Un marqueur par lieu des entrées publiées ; un appui sur un marqueur ouvre l'entrée.
-- **Carte de tous les voyages** : bouton « Carte de tous les voyages » sur l'accueil (`/map`). Tous les lieux des entrées publiées, une couleur par voyage (attribuées du plus ancien au plus récent, pour qu'un nouveau voyage ne change pas celles des autres ; elles se répètent au-delà de huit voyages). Un appui sur un marqueur ouvre l'entrée ; la légende sous la carte mène à la carte de chaque voyage. Mêmes règles que la carte d'un voyage : un voyage masqué n'y apparaît que pour son auteur et le superuser.
+- **Carte de tous les voyages** : bouton « Carte de tous les voyages » sur l'accueil (`/map`). Tous les lieux des entrées publiées, une couleur par voyage (attribuées du plus ancien au plus récent, pour qu'un nouveau voyage ne change pas celles des autres ; elles se répètent au-delà de huit voyages). Les couleurs sont choisies pour rester distinctes pour les personnes daltoniennes, et chaque voyage est aussi nommé dans la légende et dans l'info-bulle de ses marqueurs. Un appui sur un marqueur ouvre l'entrée ; la légende sous la carte mène à la carte de chaque voyage. Mêmes règles que la carte d'un voyage : un voyage masqué n'y apparaît que pour son auteur et le superuser.
 - **Page d'une entrée** : une petite carte montre son lieu ou son trajet.
 - Les brouillons n'apparaissent jamais sur la carte, même pour leur auteur.
+
+### Recherche et statistiques
+
+- **Recherche** : champ en haut de l'accueil (page `/search`). Cherche dans les titres, les textes, les noms de lieux, les tags, le nom du voyage, l'auteur et les personnes identifiées. Majuscules et accents sont ignorés (« foret » trouve « Forêt ») et tous les mots doivent être présents. Les mots trouvés sont surlignés, avec un extrait du texte. Les 50 entrées les plus récentes sont affichées. On ne trouve que ce que l'on peut déjà voir : entrées publiées des voyages visibles, plus ses propres brouillons (le superuser voit tout).
+- **Statistiques** : bouton « Statistiques » sur l'accueil (page `/stats`). Nombre de voyages, d'entrées, de jours racontés, de photos, de vidéos et de commentaires, longueur des trajets A → B (à vol d'oiseau), un tableau par voyage, les tags les plus utilisés, les personnes les plus présentes et qui écrit le plus. Seules les entrées publiées des voyages que l'on peut voir sont comptées.
 
 ### Commentaires et réactions
 
@@ -383,6 +388,7 @@ tests/                    tests automatisés
 - **Doublon possible** : si la réponse du serveur se perd juste après l'envoi d'une petite photo, celle-ci peut apparaître en double ; il suffit de supprimer le doublon.
 - **Ordre des photos** : elles restent dans l'ordre d'ajout.
 - **Indicateur de chargement** : aucun pendant le passage d'une page à l'autre. Un tel indicateur ferait répondre « 200 » au lieu de « 404 » pour un voyage masqué.
+- **Recherche** : elle parcourt les entrées à chaque requête, sans index. Largement assez rapide pour quelques milliers d'entrées ; au-delà, un index plein texte (FTS5 de SQLite) serait à ajouter.
 - **Anti brute force** : il peut bloquer pendant 15 minutes un identifiant visé par quelqu'un qui essaie des mots de passe. Le superuser lève le blocage en réinitialisant le mot de passe.
 
 ## Phase 2
@@ -393,9 +399,9 @@ Réalisé :
 - **Application installable (PWA)**, avec une page « Pas de connexion » (voir « Installer l'application »).
 - **Lieu tiré des coordonnées GPS des photos** (voir « Carte »).
 - **Carte de tous les voyages** (voir « Carte »).
+- **Recherche et statistiques** (voir « Recherche et statistiques »).
 
 Pistes restantes :
 
 - **Transcodage des vidéos** et compression plus poussée, par exemple pour lire les vidéos HEVC partout.
 - **Export d'un voyage** en PDF ou en archive.
-- **Statistiques et recherche** dans le journal.
