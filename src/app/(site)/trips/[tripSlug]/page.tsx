@@ -10,7 +10,7 @@ import { mediaUrl, thumbnailUrl } from "@/lib/media-url";
 import { filtersToQuery, hasActiveFilters, parseTripFilters } from "@/lib/trip-filters";
 import { getDb } from "@/server/db/client";
 import { loadTrip } from "@/server/page-data";
-import { canCreateEntry, canEditTrip } from "@/server/permissions";
+import { canCreateEntry, canEditTrip, canExportTrip } from "@/server/permissions";
 import { listEntries, listTripFilterOptions } from "@/server/services/entries";
 import { listCoverPhotos, listTripCovers } from "@/server/services/media";
 
@@ -69,13 +69,15 @@ export default async function TripPage({ params, searchParams }: TripPageProps) 
         ) : null}
         {canEditTrip(viewer, trip) ? <LinkButton href={`/trips/${trip.slug}/edit`}>Modifier le voyage</LinkButton> : null}
       </div>
-      <p className="-mt-3 text-sm">
-        {/* A plain link: the archive is downloaded, not opened as a page. */}
-        <a href={`/api/trips/${trip.id}/export`} download className="text-accent underline-offset-4 hover:underline">
-          Télécharger le voyage (archive ZIP)
-        </a>
-        <span className="text-muted"> : page lisible hors ligne, photos et vidéos.</span>
-      </p>
+      {canExportTrip(viewer, trip) ? (
+        <p className="-mt-3 text-sm">
+          {/* A plain link: the archive is downloaded, not opened as a page. */}
+          <a href={`/api/trips/${trip.id}/export`} download className="text-accent underline-offset-4 hover:underline">
+            Télécharger le voyage (archive ZIP)
+          </a>
+          <span className="text-muted"> : page lisible hors ligne, photos et vidéos.</span>
+        </p>
+      ) : null}
 
       <TripFiltersForm
         // Remount when the address changes, so the controls match the filters applied.

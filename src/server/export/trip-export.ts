@@ -3,8 +3,9 @@
 // and videos as stored on the site, and the same content as data
 // (journal.json).
 //
-// It contains exactly what the person exporting can see on the trip page:
-// published entries only (drafts are work in progress), with their comments.
+// Only the people who manage the trip (its author with "Gérer les voyages",
+// and the superuser) may export it. It contains the published entries only
+// (drafts are work in progress), with their comments.
 
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { stat } from "node:fs/promises";
@@ -15,7 +16,7 @@ import { parseRichText, type InlineNode } from "@/lib/rich-text";
 import { slugify } from "@/lib/slug";
 import type { Db } from "@/server/db/client";
 import { entries, entryPeople, media, users } from "@/server/db/schema";
-import { canViewEntry, canViewTrip, type Actor } from "@/server/permissions";
+import { canExportTrip, canViewEntry, type Actor } from "@/server/permissions";
 import { resolveMediaPath } from "@/server/media/storage";
 import { listCommentThreads, type CommentView } from "@/server/services/comments";
 import { tagsOfEntries } from "@/server/services/tags";
@@ -64,11 +65,11 @@ function toComment(view: CommentView, replies: CommentView[] = []): ExportedComm
 }
 
 /**
- * The archive of a trip, or null when the actor may not see it. Files are
+ * The archive of a trip, or null when the actor may not export it. Files are
  * listed with their size, then read while the archive is being sent.
  */
 export async function buildTripExport(db: Db, actor: Actor, trip: Trip, mediaDir: string, now = new Date()): Promise<TripExport | null> {
-  if (!canViewTrip(actor, trip)) return null;
+  if (!canExportTrip(actor, trip)) return null;
   const root = trip.slug;
   const pending: { name: string; path: string; modifiedAt: Date }[] = [];
   const usedNames = new Set<string>();

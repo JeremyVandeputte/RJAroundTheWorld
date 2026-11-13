@@ -81,6 +81,11 @@ export function canEditTrip(actor: Actor, trip: TripAccess): boolean {
   return isSuperuser(user) || (user.canManageTrips && trip.authorId === user.id);
 }
 
+/** Downloading a trip as an archive: the same people who manage it. */
+export function canExportTrip(actor: Actor, trip: TripAccess): boolean {
+  return canEditTrip(actor, trip);
+}
+
 /**
  * Nothing can be read without being logged in. A visible trip is open to
  * every account; a hidden trip exists only for the user who created it and

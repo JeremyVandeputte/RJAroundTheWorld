@@ -8,6 +8,7 @@ import {
   canEditComment,
   canEditEntry,
   canEditTrip,
+  canExportTrip,
   canManageUsers,
   canReact,
   canViewEntry,
@@ -97,6 +98,14 @@ describe("trip management", () => {
     }
     // A trip created by the superuser: nobody else, not even another manager.
     expectAllowed((actor) => canEditTrip(actor, visibleTrip), ["superuser"]);
+  });
+
+  it("lets only the people who manage a trip export it", () => {
+    for (const trip of [hiddenTrip, ownersVisibleTrip]) {
+      expectAllowed((actor) => canExportTrip(actor, trip), ["tripOwner", "superuser"]);
+    }
+    expectAllowed((actor) => canExportTrip(actor, visibleTrip), ["superuser"]);
+    expect(canExportTrip({ ...tripOwner, canManageTrips: false }, ownersVisibleTrip)).toBe(false);
   });
 
   it("stops the creator from changing the trip once Gérer les voyages is removed", () => {

@@ -145,13 +145,13 @@ Tout ce qui concerne les entrées, commentaires et réactions ne vaut que dans l
 
 ### Exporter un voyage
 
-Sur la page d'un voyage, « Télécharger le voyage (archive ZIP) » produit une archive `<voyage>.zip` contenant :
+Réservé aux personnes qui gèrent le voyage (son auteur, tant qu'il a « Gérer les voyages », et le superuser) : les autres ne voient pas le lien. Sur la page du voyage, « Télécharger le voyage (archive ZIP) » produit une archive `<voyage>.zip` contenant :
 
 - `index.html` : tout le voyage sur une seule page, lisible hors ligne dans n'importe quel navigateur (miniature, entrées de la plus ancienne à la plus récente, texte, lieux, personnes, tags, photos, vidéos et commentaires). Elle ne contacte aucun serveur ; les lieux sont des liens vers OpenStreetMap, ouverts seulement si on les touche. Pour un PDF, ouvrir cette page et choisir « Imprimer » puis « Enregistrer au format PDF » (les vidéos sont alors omises).
 - `media/` : les photos et vidéos telles qu'elles sont stockées sur le site, avec des noms lisibles (`2026-11-11-plage-des-salines.jpg`).
 - `journal.json` : le même contenu sous forme de données.
 
-L'archive contient exactement ce que la personne qui l'exporte peut voir : les entrées publiées (jamais les brouillons) et leurs commentaires. Tout compte qui peut voir le voyage peut l'exporter. L'archive est produite au fil du téléchargement, sans être construite d'abord sur le serveur ; les fichiers n'étant pas recompressés, elle pèse à peu près le poids des photos et vidéos du voyage. Au-delà de 4 Go, le format ZIP64 est utilisé (lu par Windows, macOS, Linux et 7-Zip).
+L'archive contient les entrées publiées (jamais les brouillons) et leurs commentaires. L'archive est produite au fil du téléchargement, sans être construite d'abord sur le serveur ; les fichiers n'étant pas recompressés, elle pèse à peu près le poids des photos et vidéos du voyage. Au-delà de 4 Go, le format ZIP64 est utilisé (lu par Windows, macOS, Linux et 7-Zip).
 
 ### Filtres
 

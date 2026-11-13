@@ -103,7 +103,7 @@ describe("trip export", () => {
     // A deleted comment with replies stays as a placeholder; without replies it disappears.
     deleteComment(db, cast.guest, comment.comment.id);
 
-    const result = (await archive(cast.guest))!;
+    const result = (await archive(cast.superuser))!;
     expect(result.built.fileName).toBe(`${trip.slug}.zip`);
     expect(result.journal.entries.map((item: { title: string }) => item.title)).toEqual(["Plage des Salines", "Pelée"]);
     const first = result.journal.entries[0];
@@ -134,7 +134,7 @@ describe("trip export", () => {
 
   it("escapes every text written by users", async () => {
     entry("publish", { title: "<script>alert(1)</script>", body: "<img src=x onerror=alert(1)> [lien](javascript:alert(1))" });
-    const { html } = (await archive(cast.guest))!;
+    const { html } = (await archive(cast.superuser))!;
     expect(html).not.toContain("<script>alert");
     expect(html).not.toContain("<img src=x");
     expect(html).not.toContain('href="javascript:');
@@ -143,12 +143,18 @@ describe("trip export", () => {
     expect(escapeHtml(`"'&<>`)).toBe("&quot;&#39;&amp;&lt;&gt;");
   });
 
-  it("follows what the person may see", async () => {
+  it("is only for the people who manage the trip", async () => {
     const hidden = makeTrip(db, cast.superuser, { title: "Surprise", isVisible: false });
     entry("publish", { title: "Secret" }, cast.superuser, hidden);
-    expect(await buildTripExport(db, cast.guest, hidden, config.mediaDir)).toBeNull();
-    expect(await buildTripExport(db, null, trip, config.mediaDir)).toBeNull();
     expect((await archive(cast.superuser, hidden))!.journal.entries).toHaveLength(1);
+    // Seeing a trip, or writing in it, is not enough.
+    for (const actor of [cast.guest, cast.publisher, cast.manager, null]) {
+      expect(await buildTripExport(db, actor, trip, config.mediaDir)).toBeNull();
+    }
+    // The author of a trip exports it while they hold "Gérer les voyages".
+    const own = makeTrip(db, cast.manager, { title: "Islande" });
+    expect(await buildTripExport(db, cast.manager, own, config.mediaDir)).not.toBeNull();
+    expect(await buildTripExport(db, { ...cast.manager, canManageTrips: false }, own, config.mediaDir)).toBeNull();
   });
 
   it("leaves out a file missing on disk instead of failing", async () => {
@@ -156,7 +162,7 @@ describe("trip export", () => {
     const photo = await upload(plage, "photo", await samplePhoto({ width: 400, height: 300 }));
     const stored = db.select().from(media).where(eq(media.publicId, photo.publicId)).get()!;
     fs.rmSync(path.join(config.mediaDir, stored.filePath));
-    const result = (await archive(cast.guest))!;
+    const result = (await archive(cast.superuser))!;
     expect([...result.files.keys()].filter((name) => name.includes("/media/"))).toEqual([]);
   });
 });
