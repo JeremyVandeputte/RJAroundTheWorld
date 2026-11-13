@@ -8,24 +8,20 @@ import { SubmitButton } from "@/components/ui/submit-button";
 import { TextField } from "@/components/ui/text-field";
 import { TextareaField } from "@/components/ui/textarea-field";
 import { usePersistentForm } from "@/components/ui/use-persistent-form";
+import { clearDraft, readFormValues, sameValues, saveDraft, type EntryFormValues } from "@/lib/entry-draft";
 import { saveEntryAction } from "@/server/actions/entries";
 
-type Point = { lat: number | null; lng: number | null; name: string | null };
+/** How often what is typed is copied to the device. */
+const AUTOSAVE_MS = 2000;
 
-type EntryFormProps = {
+export type EntryFormProps = {
   tripId: number;
   /** Existing entry to edit; omitted when writing a new one. */
-  entry?: {
-    id: number;
-    date: string;
-    title: string;
-    body: string;
-    status: "draft" | "published";
-    pointA: Point;
-    pointB: Point;
-    peopleIds: number[];
-    tagIds: number[];
-  };
+  entry?: { id: number; status: "draft" | "published" };
+  /** Values the form starts with: the saved entry, or a local draft being resumed. */
+  defaults: EntryFormValues;
+  /** Where the local copy of what is typed is kept on this device. */
+  draftKey: string;
   /** Accounts that can be identified in the entry. */
   people: { id: number; displayName: string }[];
   /** Places already used in this trip: where the map opens for an entry without a place. */
@@ -34,40 +30,80 @@ type EntryFormProps = {
   tags: { id: number; name: string; slug: string }[];
 };
 
-function toPickerPoint(point: Point | undefined) {
-  return point && point.lat !== null && point.lng !== null ? { lat: point.lat, lng: point.lng, name: point.name } : null;
+function today(): string {
+  const now = new Date();
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 }
 
-export function EntryForm({ tripId, entry, people, tripPoints, tags }: EntryFormProps) {
-  const { state, pending, formProps } = usePersistentForm(saveEntryAction);
+export function EntryForm({ tripId, entry, defaults, draftKey, people, tripPoints, tags }: EntryFormProps) {
+  const form = useRef<HTMLFormElement>(null);
   const dateInput = useRef<HTMLInputElement>(null);
+  // Once saved, the local copy is useless: remove it and stop copying.
+  const saved = useRef(false);
+  const { state, pending, formProps } = usePersistentForm(saveEntryAction, {
+    onSuccess: () => {
+      saved.current = true;
+      clearDraft(draftKey);
+    },
+  });
 
   // A new entry defaults to today, in the timezone of the device.
   useEffect(() => {
     const input = dateInput.current;
-    if (input && !input.value) {
-      const now = new Date();
-      const pad = (value: number) => String(value).padStart(2, "0");
-      input.value = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-    }
+    if (input && !input.value) input.value = today();
   }, []);
+
+  // Copy what is typed to the device, so a lost connection or a closed page loses nothing.
+  useEffect(() => {
+    let pristine: EntryFormValues | null = null;
+    let wrote = false;
+
+    function snapshot() {
+      if (!form.current || saved.current) return;
+      const values = readFormValues(form.current);
+      // The state right after loading is the reference: no change, no copy.
+      pristine ??= values;
+      if (!sameValues(values, pristine)) {
+        saveDraft(draftKey, values);
+        wrote = true;
+      } else if (wrote) {
+        clearDraft(draftKey);
+        wrote = false;
+      }
+    }
+
+    const first = window.setTimeout(snapshot, 0);
+    const timer = window.setInterval(snapshot, AUTOSAVE_MS);
+    const onHide = () => {
+      if (document.visibilityState === "hidden") snapshot();
+    };
+    document.addEventListener("visibilitychange", onHide);
+    window.addEventListener("pagehide", snapshot);
+    return () => {
+      window.clearTimeout(first);
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onHide);
+      window.removeEventListener("pagehide", snapshot);
+    };
+  }, [draftKey]);
 
   const isPublished = entry?.status === "published";
 
   return (
-    <form {...formProps} className="space-y-5">
+    <form ref={form} {...formProps} className="space-y-5">
       {entry ? (
         <input type="hidden" name="entryId" value={entry.id} />
       ) : (
         <input type="hidden" name="tripId" value={tripId} />
       )}
 
-      <TextField label="Date" name="date" type="date" ref={dateInput} defaultValue={entry?.date} required />
-      <TextField label="Titre" name="title" type="text" defaultValue={entry?.title} maxLength={150} required />
+      <TextField label="Date" name="date" type="date" ref={dateInput} defaultValue={defaults.date} required />
+      <TextField label="Titre" name="title" type="text" defaultValue={defaults.title} maxLength={150} required />
       <TextareaField
         label="Texte"
         name="body"
-        defaultValue={entry?.body}
+        defaultValue={defaults.body}
         rows={10}
         maxLength={20000}
         hint="Mise en forme : **gras** et [texte du lien](https://exemple.fr). Une ligne vide sépare deux paragraphes."
@@ -84,7 +120,7 @@ export function EntryForm({ tripId, entry, people, tripPoints, tags }: EntryForm
                   type="checkbox"
                   name="people"
                   value={person.id}
-                  defaultChecked={entry?.peopleIds.includes(person.id)}
+                  defaultChecked={defaults.peopleIds.includes(person.id)}
                   className="size-5 shrink-0 accent-accent"
                 />
                 <span>{person.displayName}</span>
@@ -94,13 +130,9 @@ export function EntryForm({ tripId, entry, people, tripPoints, tags }: EntryForm
         </fieldset>
       ) : null}
 
-      <TagPicker tags={tags} selectedIds={entry?.tagIds ?? []} />
+      <TagPicker tags={tags} selectedIds={defaults.tagIds} initialNewTags={defaults.newTags} />
 
-      <LocationPicker
-        initialA={toPickerPoint(entry?.pointA)}
-        initialB={toPickerPoint(entry?.pointB)}
-        contextPoints={tripPoints}
-      />
+      <LocationPicker initialA={defaults.pointA} initialB={defaults.pointB} contextPoints={tripPoints} />
 
       {!entry ? (
         <fieldset className="rounded-md border border-line p-3">

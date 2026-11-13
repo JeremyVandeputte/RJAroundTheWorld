@@ -21,6 +21,13 @@ function isNetworkFailure(error: unknown): boolean {
   return error instanceof TypeError && /fetch|load failed|network/i.test(error.message);
 }
 
+type PersistentFormOptions = {
+  /** Empty the form once its content is saved (short forms such as a comment box). */
+  resetOnSuccess?: boolean;
+  /** Called once the server has accepted the form (including when it redirects). */
+  onSuccess?: () => void;
+};
+
 /**
  * Form state for long forms, written for unreliable mobile connections:
  * - what the user typed stays in place when the server answers with an error
@@ -29,7 +36,7 @@ function isNetworkFailure(error: unknown): boolean {
  *   instead of the page being replaced by an error. The message says whether
  *   nothing was sent (network) or the server failed (it may have saved).
  */
-export function usePersistentForm(action: FormAction, options: { resetOnSuccess?: boolean } = {}) {
+export function usePersistentForm(action: FormAction, options: PersistentFormOptions = {}) {
   // Used as is only before JavaScript has loaded (plain form submission).
   const [initialState, formAction] = useActionState(action, emptyFormState);
   const [state, setState] = useState<FormState | null>(null);
@@ -46,11 +53,17 @@ export function usePersistentForm(action: FormAction, options: { resetOnSuccess?
       try {
         const result = await action(emptyFormState, formData);
         setState(result);
+        if (!result.error) options.onSuccess?.();
         // Short forms (a comment box) are emptied once their content is saved.
         if (options.resetOnSuccess && !result.error) form.reset();
       } catch (error) {
         // Redirections after a successful save are signalled by an error: let them through.
-        unstable_rethrow(error);
+        try {
+          unstable_rethrow(error);
+        } catch (redirection) {
+          options.onSuccess?.();
+          throw redirection;
+        }
         setState({ error: isNetworkFailure(error) ? NETWORK_ERROR : SERVER_ERROR });
       }
     });

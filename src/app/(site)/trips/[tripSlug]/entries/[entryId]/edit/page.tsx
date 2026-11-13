@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DeleteEntryForm } from "@/components/entry/delete-entry-form";
-import { EntryForm } from "@/components/entry/entry-form";
+import { EntryEditor } from "@/components/entry/entry-editor";
+import { draftKey } from "@/lib/entry-draft";
 import { MediaManager } from "@/components/entry/media-manager";
 import { Badge } from "@/components/ui/badge";
 import { getEnv } from "@/lib/env";
@@ -41,21 +42,28 @@ export default async function EditEntryPage({ params }: { params: Promise<{ trip
         </Badge>
       </div>
 
-      <EntryForm
+      <EntryEditor
         tripId={trip.id}
         people={options}
         tripPoints={listTripMapEntries(getDb(), viewer, trip).map((item) => item.pointA)}
         tags={listTags(getDb(), viewer)}
-        entry={{
-          id: entry.id,
+        entry={{ id: entry.id, status: entry.status }}
+        draftKey={draftKey(viewer.id, trip.id, entry.id)}
+        defaults={{
           date: entry.date,
           title: entry.title,
           body: entry.body,
-          status: entry.status,
-          pointA: { lat: entry.pointALat, lng: entry.pointALng, name: entry.pointAName },
-          pointB: { lat: entry.pointBLat, lng: entry.pointBLng, name: entry.pointBName },
           peopleIds: people.map((person) => person.id),
           tagIds: detail.tags.map((tag) => tag.id),
+          newTags: [],
+          pointA:
+            entry.pointALat !== null && entry.pointALng !== null
+              ? { lat: entry.pointALat, lng: entry.pointALng, name: entry.pointAName ?? "" }
+              : null,
+          pointB:
+            entry.pointBLat !== null && entry.pointBLng !== null
+              ? { lat: entry.pointBLat, lng: entry.pointBLng, name: entry.pointBName ?? "" }
+              : null,
         }}
       />
 

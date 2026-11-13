@@ -10,6 +10,8 @@ type TagPickerProps = {
   tags: TagOption[];
   /** Tags already on the entry. */
   selectedIds: number[];
+  /** New tags typed but not saved yet (restored from a local draft). */
+  initialNewTags?: string[];
 };
 
 const MAX_LENGTH = 30;
@@ -20,8 +22,8 @@ const chip =
  * Tags of an entry: existing tags are toggled by touching them, and a new
  * one can be typed. New tags are only created when the entry is saved.
  */
-export function TagPicker({ tags, selectedIds }: TagPickerProps) {
-  const [newTags, setNewTags] = useState<string[]>([]);
+export function TagPicker({ tags, selectedIds, initialNewTags = [] }: TagPickerProps) {
+  const [newTags, setNewTags] = useState<string[]>(initialNewTags);
   const [draft, setDraft] = useState("");
   const [checked, setChecked] = useState<Set<number>>(() => new Set(selectedIds));
   const [hint, setHint] = useState<string | null>(null);

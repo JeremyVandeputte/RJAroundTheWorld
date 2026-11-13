@@ -206,6 +206,7 @@ La cloche de l'en-tête indique le nombre de notifications non lues et mène à 
 
 - **Envoi de photos et vidéos** : par morceaux de 4 Mo. Après une coupure courte, le morceau en cours est renvoyé automatiquement (4 nouvelles tentatives). Après une coupure plus longue, l'envoi s'arrête avec un message, et « Reprendre l'envoi » repart d'où il s'était arrêté tant que la page reste ouverte.
 - **Formulaires** (entrée, commentaire…) envoyés sans réseau : un message « Connexion interrompue » s'affiche et tout ce qui a été saisi reste en place.
+- **Brouillon local d'une entrée** : pendant la rédaction (nouvelle entrée ou modification), ce qui est saisi est copié toutes les 2 secondes dans le navigateur de l'appareil, ainsi qu'au moment où l'on quitte l'application ou la page. Si la page est fermée, rechargée ou perdue avant l'enregistrement, la rouvrir affiche « Des modifications non enregistrées du … ont été retrouvées sur cet appareil », avec **Reprendre ces modifications** ou **Les ignorer**. Sont conservés : date, titre, texte, personnes, tags (y compris les nouveaux) et lieu ; pas les photos, qui s'envoient séparément. La copie est supprimée dès que l'entrée est enregistrée, et n'est pas proposée si elle est identique à ce qui est enregistré. Elle est propre à chaque compte, voyage et entrée, et ne quitte jamais l'appareil.
 - **Erreur du serveur** : le message le dit, au lieu de parler de coupure, et invite à recharger la page pour vérifier si l'action a été enregistrée.
 - **Refus du serveur** (lieu manquant, par exemple) : le formulaire reste tel qu'il a été rempli.
 
@@ -233,6 +234,7 @@ Si le téléphone n'atteint pas le site, le pare-feu de l'ordinateur bloque prob
 
 - Toutes les saisies sont validées côté serveur. Les textes sont affichés comme du texte ; le seul balisage interprété est le gras et les liens `http`/`https` des entrées.
 - Les fichiers ne sont jamais servis par une adresse publique : `/api/media/<identifiant aléatoire>` applique les mêmes règles que la page de l'entrée, et répond 404 dans tous les autres cas. Le type d'un fichier est déterminé par son contenu, jamais par son nom.
+- Le brouillon local d'une entrée reste dans le navigateur de l'appareil (`localStorage`) jusqu'à l'enregistrement ou « Les ignorer » ; il n'est pas effacé à la déconnexion. Sur un appareil partagé, enregistrer ou ignorer ses brouillons avant de le prêter.
 - Un voyage masqué, un brouillon ou une entrée retirée ne fuient nulle part : listes, carte, notifications, adresses directes et fichiers répondent comme s'ils n'existaient pas.
 
 ### En-têtes
@@ -368,9 +370,12 @@ tests/                    tests automatisés
 
 ## Phase 2
 
-Pistes prévues, non développées. Rien dans la Phase 1 ne les empêche :
+Réalisé :
 
-- **Mode hors ligne partiel** ou brouillon conservé sur le téléphone si la connexion saute.
+- **Brouillon local** d'une entrée en cours de rédaction (voir « Connexion instable »).
+
+Pistes restantes :
+
 - **Application installable (PWA)** : les en-têtes l'autorisent déjà.
 - **Transcodage des vidéos** et compression plus poussée, par exemple pour lire les vidéos HEVC partout.
 - **Lieu tiré des coordonnées GPS des photos** : elles sont déjà enregistrées en base à l'envoi.
