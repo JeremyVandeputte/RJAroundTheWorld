@@ -2,7 +2,7 @@
 
 Journal de voyage privé, pour raconter nos voyages à nos proches : entrées datées avec texte, photos, vidéos et lieu sur une carte, commentaires, réactions et notifications.
 
-Le site n'est accessible que par un **lien secret** et n'est jamais indexé par les moteurs de recherche. Il est pensé pour un usage sur téléphone, y compris avec une connexion instable.
+Le site n'est accessible que par un **lien secret**, puis **avec un compte** : rien n'est lisible sans être connecté. Il n'est jamais indexé par les moteurs de recherche. Il est pensé pour un usage sur téléphone, y compris avec une connexion instable.
 
 Nom technique (dépôt, paquet, base de données) : `rjaroundtheworld`.
 
@@ -50,7 +50,7 @@ Prérequis : Node.js 22.12 ou plus récent (développé avec Node.js 24) et npm.
    npm run dev
    ```
 
-5. **Ouvrir le lien secret** : `http://localhost:3000/access/` suivi de la valeur de `ACCESS_TOKEN`. Sans ce lien, le site répond « Not Found » partout. Se connecter ensuite avec « Se connecter », en haut à droite.
+5. **Ouvrir le lien secret** : `http://localhost:3000/access/` suivi de la valeur de `ACCESS_TOKEN`. Il mène à la page de connexion. Sans ce lien, le site répond « Not Found » partout.
 
 Si tu oublies le mot de passe du superuser, relance `npm run create-superuser` : il propose d'en définir un nouveau et ferme toutes les sessions du compte. Pour un usage automatisé, les réponses peuvent être passées par les variables `SUPERUSER_USERNAME`, `SUPERUSER_DISPLAY_NAME` et `SUPERUSER_PASSWORD`.
 
@@ -78,9 +78,9 @@ Toute la configuration passe par des variables d'environnement (fichier `.env` e
 
 Le site ne répond qu'aux navigateurs qui ont ouvert le lien secret au moins une fois : `<APP_URL>/access/<ACCESS_TOKEN>`. Le superuser le retrouve en bas de la page « Administration », avec un bouton pour le copier.
 
-- Le lien dépose un cookie d'accès valable 400 jours, puis redirige vers l'accueil : le token ne reste pas dans la barre d'adresse.
+- Le lien dépose un cookie d'accès valable 400 jours, puis redirige vers la page de connexion : le token ne reste pas dans la barre d'adresse.
 - Il doit être ouvert une fois sur chaque appareil. Sans le cookie, toutes les adresses (pages, connexion, fichiers) renvoient la même réponse 404 neutre ; seul `robots.txt` est public.
-- Le lien suffit pour lire les entrées publiées des voyages visibles, la carte, les photos et les vidéos. Les commentaires et réactions demandent un compte.
+- Le lien ne donne accès qu'à la page de connexion. **Tout le reste demande un compte** : sans être connecté, chaque page renvoie vers la connexion, et les photos et vidéos répondent 404.
 - Le lien est fixe. En cas de fuite, changer `ACCESS_TOKEN` et redémarrer : l'ancien lien et tous les cookies d'accès cessent de fonctionner, et il faut transmettre le nouveau lien à tout le monde.
 
 ### Comptes et permissions
@@ -100,22 +100,24 @@ Chacun change son mot de passe dans « Mon profil » (clic sur son nom, en haut 
 
 Toutes les règles d'accès sont dans un seul fichier, `src/server/permissions.ts`, appliqué côté serveur à chaque page, action et fichier. L'interface ne fait que masquer ce qui serait refusé de toute façon.
 
-| | Visiteur (lien seul) | User | Superuser |
-|---|---|---|---|
-| Voir un voyage visible et ses entrées publiées | oui | oui | oui |
-| Voir un voyage non visible et ses entrées | non | son auteur | oui |
-| Voir un brouillon | non | son auteur | oui |
-| Créer une entrée | non | si Publier | oui |
-| Modifier, retirer ou supprimer une entrée | non | les siennes, si Publier | oui |
-| Voir les commentaires et réactions | non | oui | oui |
-| Commenter, répondre | non | si Commenter | oui |
-| Modifier ou supprimer un commentaire | non | les siens, si Commenter | oui |
-| Réagir | non | si Réagir | oui |
-| Créer un voyage | non | si Gérer les voyages | oui |
-| Modifier, masquer ou supprimer un voyage | non | les siens, si Gérer les voyages | oui |
-| Gérer les comptes | non | non | oui |
+| | User | Superuser |
+|---|---|---|
+| Voir un voyage visible et ses entrées publiées | oui | oui |
+| Voir un voyage non visible et ses entrées | son auteur | oui |
+| Voir un brouillon | son auteur | oui |
+| Créer une entrée | si Publier | oui |
+| Modifier, retirer ou supprimer une entrée | les siennes, si Publier | oui |
+| Voir les commentaires et réactions | oui | oui |
+| Commenter, répondre | si Commenter | oui |
+| Modifier ou supprimer un commentaire | les siens, si Commenter | oui |
+| Réagir | si Réagir | oui |
+| Créer un voyage | si Gérer les voyages | oui |
+| Modifier, masquer ou supprimer un voyage | les siens, si Gérer les voyages | oui |
+| Gérer les comptes | non | oui |
 
-Tout ce qui concerne les entrées, commentaires et réactions ne vaut que dans les voyages que la personne peut voir. Les quatre permissions sont indépendantes : pour préparer un voyage masqué et y écrire, il faut Gérer les voyages (pour le créer) et Publier (pour y écrire). Un compte désactivé, ou qui doit d'abord changer son mot de passe, n'a pas plus de droits qu'un visiteur.
+Sans compte, rien n'est accessible : seule la page de connexion répond.
+
+Tout ce qui concerne les entrées, commentaires et réactions ne vaut que dans les voyages que la personne peut voir. Les quatre permissions sont indépendantes : pour préparer un voyage masqué et y écrire, il faut Gérer les voyages (pour le créer) et Publier (pour y écrire). Un compte désactivé, ou qui doit d'abord changer son mot de passe, n'a accès à rien d'autre que sa page de profil.
 
 ### Voyages
 
@@ -159,7 +161,7 @@ La carte utilise Leaflet (inclus dans le site, aucun CDN) et les fonds de carte 
 
 ### Commentaires et réactions
 
-En bas de la page d'une entrée publiée, visibles uniquement par les personnes connectées qui peuvent voir l'entrée. Un visiteur sans compte ne reçoit rien, pas même un compteur.
+En bas de la page d'une entrée publiée, visibles par toutes les personnes qui peuvent voir l'entrée.
 
 - **Commenter** (permission Commenter) : texte simple, 2 000 caractères au maximum, sauts de ligne conservés.
 - **Répondre** : un seul niveau ; répondre à une réponse la place sous le même commentaire de départ.

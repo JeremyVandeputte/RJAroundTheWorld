@@ -1,4 +1,3 @@
-import Link from "next/link";
 import type { SessionUser } from "@/server/auth/sessions";
 import type { Db } from "@/server/db/client";
 import { canComment, canReact } from "@/server/permissions";
@@ -19,24 +18,15 @@ const noReactions: ReactionSummary = {
 };
 
 /**
- * Reactions and comments of a published entry. Visitors without an account
- * see neither, not even counts: nothing about them is sent to their browser.
+ * Reactions and comments of a published entry (pages are only shown to
+ * logged-in users; the services still refuse anything to anyone else).
  */
 export function SocialSection({ db, viewer, trip, entry }: SocialSectionProps) {
   if (entry.status !== "published") return null;
 
   const threads = listCommentThreads(db, viewer, trip, entry);
   const reactions = getEntryReactions(db, viewer, trip, entry);
-  if (threads === null || reactions === null) {
-    return viewer ? null : (
-      <p className="border-t border-line pt-4 text-sm text-muted">
-        <Link href="/login" className="text-accent underline underline-offset-2">
-          Connectez-vous
-        </Link>{" "}
-        pour voir les réactions et les commentaires.
-      </p>
-    );
-  }
+  if (threads === null || reactions === null) return null;
 
   const mayComment = canComment(viewer, trip, entry);
   const mayReact = canReact(viewer, trip, entry);

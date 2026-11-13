@@ -17,21 +17,19 @@ export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
 });
 
 /**
- * Viewer of a page: a user or an anonymous visitor (null).
- * A user who must choose a new password is sent to the profile page first.
+ * Viewer of a page. Every page requires an account: an anonymous visitor is
+ * sent to the login page, and a user who must choose a new password to the
+ * profile page first.
  */
-export async function getViewer(): Promise<SessionUser | null> {
+export async function getViewer(): Promise<SessionUser> {
   const user = await getCurrentUser();
-  if (user?.mustChangePassword) redirect("/profile");
+  if (!user) redirect("/login");
+  if (user.mustChangePassword) redirect("/profile");
   return user;
 }
 
-/** Same as `getViewer`, for pages that require an account. */
-export async function requireUser(): Promise<SessionUser> {
-  const user = await getViewer();
-  if (!user) redirect("/login");
-  return user;
-}
+/** Same as `getViewer` (kept for readability where an account is the point). */
+export const requireUser = getViewer;
 
 export async function setSessionCookie(token: string): Promise<void> {
   const env = getEnv();

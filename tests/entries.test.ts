@@ -73,15 +73,17 @@ describe("drafts and publication", () => {
     expect(published.ok && published.entry.status).toBe("published");
     expect(published.ok && published.entry.publishedAt).toBeInstanceOf(Date);
 
-    for (const actor of [null, cast.guest, cast.otherPublisher, cast.superuser]) {
+    for (const actor of [cast.guest, cast.otherPublisher, cast.superuser]) {
       expect(getEntry(db, actor, visibleTrip, draft.id)?.entry.id).toBe(draft.id);
     }
+    // Without an account, nothing is visible.
+    expect(getEntry(db, null, visibleTrip, draft.id)).toBeNull();
   });
 
   it("can publish directly at creation", () => {
     const entry = mustCreateEntry(cast.publisher, visibleTrip, "publish");
     expect(entry.status).toBe("published");
-    expect(titles(null, visibleTrip)).toEqual([entry.title]);
+    expect(titles(cast.guest, visibleTrip)).toEqual([entry.title]);
   });
 
   it("keeps a published entry published when it is edited", () => {
@@ -154,7 +156,7 @@ describe("hidden trips", () => {
     const revealed = updateTrip(db, cast.superuser, hiddenTrip.id, tripInput({ title: "Caché", isVisible: true }));
     if (!revealed.ok) throw new Error(revealed.reason);
 
-    expect(titles(null, revealed.trip)).toEqual(["Deuxième", "Surprise"]);
+    expect(titles(null, revealed.trip)).toEqual([]);
     expect(titles(cast.guest, revealed.trip)).toEqual(["Deuxième", "Surprise"]);
   });
 
@@ -190,9 +192,8 @@ describe("hidden trips", () => {
 
 describe("who can write", () => {
   it("requires Publier to create an entry", () => {
-    for (const actor of [null, cast.guest]) {
-      expect(createEntry(db, actor, visibleTrip.id, input(), "save")).toEqual({ ok: false, reason: "forbidden" });
-    }
+    expect(createEntry(db, cast.guest, visibleTrip.id, input(), "save")).toEqual({ ok: false, reason: "forbidden" });
+    expect(createEntry(db, null, visibleTrip.id, input(), "save")).toEqual({ ok: false, reason: "not_found" });
     expect(db.select().from(entries).all()).toHaveLength(0);
     expect(createEntry(db, cast.publisher, visibleTrip.id, input(), "save").ok).toBe(true);
     expect(createEntry(db, cast.superuser, hiddenTrip.id, input(), "publish").ok).toBe(true);
@@ -200,7 +201,10 @@ describe("who can write", () => {
 
   it("never lets a user edit, unpublish or delete someone else's entry", () => {
     const entry = mustCreateEntry(cast.publisher, visibleTrip, "publish");
-    for (const actor of [null, cast.guest, cast.otherPublisher]) {
+    // Without an account the entry does not exist at all.
+    expect(updateEntry(db, null, entry.id, input({ title: "Piraté" }), "save")).toEqual({ ok: false, reason: "not_found" });
+    expect(deleteEntry(db, null, entry.id)).toEqual({ ok: false, reason: "not_found" });
+    for (const actor of [cast.guest, cast.otherPublisher]) {
       expect(updateEntry(db, actor, entry.id, input({ title: "Piraté" }), "save")).toEqual({
         ok: false,
         reason: "forbidden",
@@ -291,7 +295,7 @@ describe("identified people", () => {
     const entry = mustCreateEntry(cast.publisher, visibleTrip, "publish", {
       peopleIds: [cast.guest.id, cast.superuser.id, cast.guest.id],
     });
-    const names = () => getEntry(db, null, visibleTrip, entry.id)?.people.map((person) => person.displayName);
+    const names = () => getEntry(db, cast.guest, visibleTrip, entry.id)?.people.map((person) => person.displayName);
     expect(names()).toEqual(["admin", "marie"]);
 
     updateEntry(db, cast.publisher, entry.id, input({ peopleIds: [cast.otherPublisher.id] }), "save");
@@ -336,8 +340,8 @@ describe("identified people", () => {
   it("shows the author's display name with the entry", () => {
     db.update(users).set({ displayName: "Romane" }).where(eq(users.id, cast.publisher.id)).run();
     const entry = mustCreateEntry(cast.publisher, visibleTrip, "publish");
-    expect(getEntry(db, null, visibleTrip, entry.id)?.author).toEqual({ id: cast.publisher.id, displayName: "Romane" });
-    expect(listEntries(db, null, visibleTrip)[0]?.authorName).toBe("Romane");
+    expect(getEntry(db, cast.guest, visibleTrip, entry.id)?.author).toEqual({ id: cast.publisher.id, displayName: "Romane" });
+    expect(listEntries(db, cast.guest, visibleTrip)[0]?.authorName).toBe("Romane");
   });
 });
 
@@ -346,7 +350,7 @@ describe("listing entries", () => {
     mustCreateEntry(cast.publisher, visibleTrip, "publish", { title: "Jour 1", date: "2026-11-01" });
     mustCreateEntry(cast.publisher, visibleTrip, "publish", { title: "Jour 3", date: "2026-11-03" });
     mustCreateEntry(cast.publisher, visibleTrip, "publish", { title: "Jour 2", date: "2026-11-02" });
-    expect(titles(null, visibleTrip)).toEqual(["Jour 3", "Jour 2", "Jour 1"]);
+    expect(titles(cast.guest, visibleTrip)).toEqual(["Jour 3", "Jour 2", "Jour 1"]);
   });
 
   it("mixes each viewer's own drafts with published entries", () => {
@@ -354,7 +358,7 @@ describe("listing entries", () => {
     mustCreateEntry(cast.publisher, visibleTrip, "save", { title: "Brouillon de Romane", date: "2026-11-02" });
     mustCreateEntry(cast.otherPublisher, visibleTrip, "save", { title: "Brouillon de Paul", date: "2026-11-03" });
 
-    expect(titles(null, visibleTrip)).toEqual(["Publiée"]);
+    expect(titles(cast.guest, visibleTrip)).toEqual(["Publiée"]);
     expect(titles(cast.publisher, visibleTrip)).toEqual(["Brouillon de Romane", "Publiée"]);
     expect(titles(cast.otherPublisher, visibleTrip)).toEqual(["Brouillon de Paul", "Publiée"]);
     expect(titles(cast.superuser, visibleTrip)).toEqual(["Brouillon de Paul", "Brouillon de Romane", "Publiée"]);
@@ -373,7 +377,7 @@ describe("trip map", () => {
       pointB: { lat: 14.81, lng: -61.17, name: "" },
     });
 
-    expect(points(null, visibleTrip)).toEqual([
+    expect(points(cast.guest, visibleTrip)).toEqual([
       {
         id: expect.any(Number),
         title: "Randonnée",
@@ -401,9 +405,9 @@ describe("trip map", () => {
 
   it("removes an entry from the map when it is unpublished", () => {
     const entry = mustCreateEntry(cast.publisher, visibleTrip, "publish");
-    expect(points(null, visibleTrip)).toHaveLength(1);
+    expect(points(cast.guest, visibleTrip)).toHaveLength(1);
     updateEntry(db, cast.publisher, entry.id, input(), "unpublish");
-    expect(points(null, visibleTrip)).toEqual([]);
+    expect(points(cast.guest, visibleTrip)).toEqual([]);
   });
 
   it("shows nothing of a hidden trip to those who cannot see it", () => {

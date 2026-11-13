@@ -92,13 +92,15 @@ describe("creating trips", () => {
 describe("editing trips", () => {
   it("is reserved to the creator of the trip and the superuser", () => {
     const trip = mustCreate(cast.manager, { title: "Voyage de Lucie" });
-    for (const actor of [null, cast.guest, cast.publisher, otherManager]) {
+    for (const actor of [cast.guest, cast.publisher, otherManager]) {
       expect(updateTrip(db, actor, trip.id, tripInput({ title: "Piraté", isVisible: false }))).toEqual({
         ok: false,
         reason: "forbidden",
       });
     }
-    expect(getTripById(db, null, trip.id)).toMatchObject({ title: "Voyage de Lucie", isVisible: true });
+    // Without an account, the trip does not even exist.
+    expect(updateTrip(db, null, trip.id, tripInput({ title: "Piraté" }))).toEqual({ ok: false, reason: "trip_not_found" });
+    expect(getTripById(db, cast.guest, trip.id)).toMatchObject({ title: "Voyage de Lucie", isVisible: true });
 
     expect(updateTrip(db, cast.manager, trip.id, tripInput({ title: "Renommé par Lucie" })).ok).toBe(true);
     const bySuperuser = updateTrip(db, cast.superuser, trip.id, tripInput({ title: "Renommé par l'admin" }));
@@ -110,7 +112,7 @@ describe("editing trips", () => {
     const trip = mustCreate(cast.superuser);
     expect(updateTrip(db, cast.manager, trip.id, tripInput({ isVisible: false }))).toEqual({ ok: false, reason: "forbidden" });
     expect(deleteTrip(db, cast.manager, trip.id)).toEqual({ ok: false, reason: "forbidden" });
-    expect(getTripById(db, null, trip.id)?.isVisible).toBe(true);
+    expect(getTripById(db, cast.guest, trip.id)?.isVisible).toBe(true);
   });
 
   it("stops the creator from editing once Gérer les voyages is removed", () => {
@@ -153,7 +155,7 @@ describe("trip visibility", () => {
   });
 
   it("lists a hidden trip only for its creator and the superuser", () => {
-    expect(titles(null)).toEqual(["Visible"]);
+    expect(titles(null)).toEqual([]);
     expect(titles(cast.guest)).toEqual(["Visible"]);
     expect(titles(cast.publisher)).toEqual(["Visible"]);
     expect(titles(otherManager)).toEqual(["Visible"]);
@@ -172,25 +174,27 @@ describe("trip visibility", () => {
     expect(getTripBySlug(db, cast.manager, hiddenBySuperuser.slug)).toBeNull();
     expect(getTripBySlug(db, cast.manager, hiddenByManager.slug)?.id).toBe(hiddenByManager.id);
     expect(getTripBySlug(db, cast.superuser, hiddenByManager.slug)?.id).toBe(hiddenByManager.id);
-    expect(getTripBySlug(db, null, visible.slug)?.id).toBe(visible.id);
+    expect(getTripBySlug(db, cast.guest, visible.slug)?.id).toBe(visible.id);
+    // Without an account, not even visible trips exist.
+    expect(getTripBySlug(db, null, visible.slug)).toBeNull();
   });
 
-  it("hides a creator's own hidden trip while their account is restricted", () => {
+  it("shows nothing to an account that is restricted", () => {
     const locked = { ...cast.manager, mustChangePassword: true };
     const deactivated = { ...cast.manager, isActive: false };
     for (const actor of [locked, deactivated]) {
-      expect(titles(actor)).toEqual(["Visible"]);
+      expect(titles(actor)).toEqual([]);
       expect(getTripBySlug(db, actor, hiddenByManager.slug)).toBeNull();
     }
   });
 
   it("reveals a trip at once when its creator makes it visible, and hides it again", () => {
     updateTrip(db, cast.manager, hiddenByManager.id, tripInput({ title: "Caché (Lucie)", isVisible: true }));
-    expect(getTripBySlug(db, null, hiddenByManager.slug)?.id).toBe(hiddenByManager.id);
+    expect(getTripBySlug(db, cast.guest, hiddenByManager.slug)?.id).toBe(hiddenByManager.id);
     expect(titles(cast.guest)).toHaveLength(2);
 
     updateTrip(db, cast.manager, hiddenByManager.id, tripInput({ title: "Caché (Lucie)", isVisible: false }));
-    expect(getTripBySlug(db, null, hiddenByManager.slug)).toBeNull();
+    expect(getTripBySlug(db, cast.guest, hiddenByManager.slug)).toBeNull();
     expect(titles(cast.guest)).toEqual(["Visible"]);
   });
 
@@ -214,9 +218,10 @@ describe("deleting trips", () => {
 
   it("is reserved to the creator of the trip and the superuser", () => {
     const trip = mustCreate(cast.manager);
-    for (const actor of [null, cast.guest, cast.publisher, otherManager]) {
+    for (const actor of [cast.guest, cast.publisher, otherManager]) {
       expect(deleteTrip(db, actor, trip.id)).toEqual({ ok: false, reason: "forbidden" });
     }
+    expect(deleteTrip(db, null, trip.id)).toEqual({ ok: false, reason: "trip_not_found" });
     expect(exists(trip)).toBe(true);
   });
 

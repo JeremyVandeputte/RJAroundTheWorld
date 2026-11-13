@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { LoginForm } from "@/components/auth/login-form";
 import { APP_NAME } from "@/lib/app";
-import { getViewer } from "@/server/auth/current-user";
+import { getCurrentUser } from "@/server/auth/current-user";
 
 export const metadata: Metadata = { title: "Connexion" };
 
 export default async function LoginPage() {
-  if (await getViewer()) redirect("/");
+  const user = await getCurrentUser();
+  if (user) redirect(user.mustChangePassword ? "/profile" : "/");
   return (
     <div className="mx-auto max-w-sm">
       <h1 className="text-2xl font-semibold tracking-tight">Connexion</h1>

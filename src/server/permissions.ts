@@ -7,10 +7,11 @@ import type { EntryStatus } from "@/server/db/schema";
  * the interface only uses them to hide what would be refused anyway.
  *
  * Four independent switches per user: Commenter, Réagir, Publier and
- * Gérer les voyages. "anonymous" is a visitor who only has the secret link.
+ * Gérer les voyages. "anonymous" is a visitor who only has the secret link:
+ * they can reach the login page and nothing else.
  *
  *                              anonymous   user              superuser
- *   see a visible trip            yes      yes                 yes
+ *   see a visible trip            no       yes                 yes
  *   see a hidden trip             no       its author only     yes
  *   see a published entry         (same as its trip)
  *   see a draft                   no       its author only     yes
@@ -70,11 +71,15 @@ export function canEditTrip(actor: Actor, trip: TripAccess): boolean {
   return isSuperuser(user) || (user.canManageTrips && trip.authorId === user.id);
 }
 
-/** A hidden trip exists only for the user who created it and for the superuser. */
+/**
+ * Nothing can be read without being logged in. A visible trip is open to
+ * every account; a hidden trip exists only for the user who created it and
+ * for the superuser.
+ */
 export function canViewTrip(actor: Actor, trip: TripAccess): boolean {
-  if (trip.isVisible) return true;
   const user = effectiveUser(actor);
-  return user !== null && (isSuperuser(user) || trip.authorId === user.id);
+  if (user === null) return false;
+  return trip.isVisible || isSuperuser(user) || trip.authorId === user.id;
 }
 
 /** Also governs the entry's media and its place on the map. */

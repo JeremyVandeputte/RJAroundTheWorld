@@ -60,6 +60,10 @@ const everyone = {
 };
 type Name = keyof typeof everyone;
 const allNames = Object.keys(everyone) as Name[];
+/** Accounts that can use the site: logged in, active, password not waiting to be changed. */
+const loggedInActive = allNames.filter(
+  (name) => !(["anonymous", "deactivated", "mustChange", "lockedSuperuser"] as Name[]).includes(name),
+);
 
 /** Asserts that exactly the listed actors are allowed. */
 function expectAllowed(check: (actor: Actor) => boolean, allowed: Name[]) {
@@ -110,8 +114,9 @@ describe("trip management", () => {
 });
 
 describe("trip visibility", () => {
-  it("shows a visible trip to everyone, including anonymous visitors", () => {
-    expectAllowed((actor) => canViewTrip(actor, visibleTrip), allNames);
+  it("shows a visible trip to every logged-in account, never to anonymous visitors", () => {
+    expectAllowed((actor) => canViewTrip(actor, visibleTrip), loggedInActive);
+    expect(canViewTrip(null, visibleTrip)).toBe(false);
   });
 
   it("shows a hidden trip only to its creator and to the superuser", () => {
@@ -125,8 +130,8 @@ describe("trip visibility", () => {
 });
 
 describe("entry visibility", () => {
-  it("shows a published entry of a visible trip to everyone", () => {
-    expectAllowed((actor) => canViewEntry(actor, visibleTrip, published), allNames);
+  it("shows a published entry of a visible trip to every logged-in account only", () => {
+    expectAllowed((actor) => canViewEntry(actor, visibleTrip, published), loggedInActive);
   });
 
   it("hides every entry of a hidden trip, even published, from those who cannot see the trip", () => {
@@ -256,8 +261,8 @@ describe("restricted accounts", () => {
       expect(canCreateEntry(actor, visibleTrip)).toBe(false);
       expect(canViewSocial(actor, visibleTrip, published)).toBe(false);
       expect(canManageUsers(actor)).toBe(false);
-      // Public content stays readable, exactly as for a visitor with the link.
-      expect(canViewEntry(actor, visibleTrip, published)).toBe(true);
+      // Nothing is readable without a usable account.
+      expect(canViewEntry(actor, visibleTrip, published)).toBe(false);
     }
   });
 });

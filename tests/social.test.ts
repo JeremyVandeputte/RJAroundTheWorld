@@ -105,9 +105,8 @@ describe("who can see comments and reactions", () => {
 
 describe("posting comments", () => {
   it("requires the Commenter permission", () => {
-    for (const actor of [null, muted]) {
-      expect(addComment(db, actor, entry.id, { body: "Bonjour", replyToId: null })).toEqual({ ok: false, reason: "forbidden" });
-    }
+    expect(addComment(db, muted, entry.id, { body: "Bonjour", replyToId: null })).toEqual({ ok: false, reason: "forbidden" });
+    expect(addComment(db, null, entry.id, { body: "Bonjour", replyToId: null })).toEqual({ ok: false, reason: "not_found" });
     expect(addComment(db, { ...cast.guest, canComment: false }, entry.id, { body: "x", replyToId: null })).toEqual({
       ok: false,
       reason: "forbidden",
@@ -309,9 +308,10 @@ describe("reactions", () => {
   const summary = (actor: Actor = cast.guest) => getEntryReactions(db, actor, trip, entry)!;
 
   it("require the Réagir permission", () => {
-    for (const actor of [null, muted, { ...cast.guest, canReact: false }]) {
+    for (const actor of [muted, { ...cast.guest, canReact: false }]) {
       expect(react(db, actor, { entryId: entry.id }, "like")).toEqual({ ok: false, reason: "forbidden" });
     }
+    expect(react(db, null, { entryId: entry.id }, "like")).toEqual({ ok: false, reason: "not_found" });
     expect(db.select().from(reactions).all()).toHaveLength(0);
     expect(react(db, cast.guest, { entryId: entry.id }, "like")).toMatchObject({ ok: true, change: "added" });
   });

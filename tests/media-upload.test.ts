@@ -99,7 +99,7 @@ describe("uploading a photo", () => {
     const first = await upload(cast.publisher, entry, "photo", photoBytes);
     const second = await upload(cast.publisher, entry, "video", sampleVideo(3000));
     const third = await upload(cast.publisher, entry, "photo", photoBytes);
-    expect(listEntryMedia(db, null, trip, entry).map((item) => item.publicId)).toEqual([
+    expect(listEntryMedia(db, cast.guest, trip, entry).map((item) => item.publicId)).toEqual([
       first.publicId,
       second.publicId,
       third.publicId,
@@ -262,11 +262,13 @@ describe("who can upload", () => {
   });
 
   it("refuses everyone else", async () => {
-    for (const actor of [null, cast.guest, cast.otherPublisher, cast.manager]) {
+    for (const actor of [cast.guest, cast.otherPublisher, cast.manager]) {
       expect(await attempt(actor, entry)).toEqual({ ok: false, reason: "forbidden" });
     }
+    expect(await attempt(null, entry)).toEqual({ ok: false, reason: "not_found" });
     expect(await attempt({ ...cast.publisher, canPublish: false }, entry)).toEqual({ ok: false, reason: "forbidden" });
-    expect(await attempt({ ...cast.publisher, mustChangePassword: true }, entry)).toEqual({ ok: false, reason: "forbidden" });
+    // An account that must first change its password sees nothing at all.
+    expect(await attempt({ ...cast.publisher, mustChangePassword: true }, entry)).toEqual({ ok: false, reason: "not_found" });
     expect(listFiles(config.mediaDir)).toEqual([]);
   });
 
@@ -338,9 +340,12 @@ describe("limits", () => {
 });
 
 describe("who can see a media file", () => {
-  it("follows the entry: a published entry of a visible trip is readable by anyone with the link", async () => {
+  it("follows the entry: a published entry of a visible trip is readable by every logged-in account", async () => {
     const item = await upload(cast.publisher, entry, "photo", photoBytes);
-    for (const actor of [null, cast.guest, cast.otherPublisher, cast.superuser]) {
+    // Never without an account, even with the secret link.
+    expect(getMediaForViewing(db, null, item.publicId)).toBeNull();
+    expect(listEntryMedia(db, null, trip, entry)).toEqual([]);
+    for (const actor of [cast.guest, cast.otherPublisher, cast.superuser]) {
       expect(getMediaForViewing(db, actor, item.publicId)?.publicId).toBe(item.publicId);
       expect(listEntryMedia(db, actor, trip, entry)).toHaveLength(1);
     }
@@ -378,7 +383,7 @@ describe("who can see a media file", () => {
 
     // Revealing the trip reveals its media at once; hiding it again hides them.
     updateTrip(db, tripOwner, hiddenTrip.id, tripInput({ title: "Caché", isVisible: true }));
-    expect(getMediaForViewing(db, null, item.publicId)).not.toBeNull();
+    expect(getMediaForViewing(db, cast.guest, item.publicId)).not.toBeNull();
     updateTrip(db, tripOwner, hiddenTrip.id, tripInput({ title: "Caché", isVisible: false }));
     expect(getMediaForViewing(db, null, item.publicId)).toBeNull();
   });
@@ -400,9 +405,10 @@ describe("who can see a media file", () => {
 describe("deleting media", () => {
   it("is reserved to the author of the entry and the superuser", async () => {
     const item = await upload(cast.publisher, entry, "photo", photoBytes);
-    for (const actor of [null, cast.guest, cast.otherPublisher]) {
+    for (const actor of [cast.guest, cast.otherPublisher]) {
       expect(deleteMedia(db, actor, item.publicId)).toEqual({ ok: false, reason: "forbidden" });
     }
+    expect(deleteMedia(db, null, item.publicId)).toEqual({ ok: false, reason: "not_found" });
     expect(db.select().from(media).all()).toHaveLength(1);
     expect(deleteMedia(db, cast.superuser, item.publicId).ok).toBe(true);
     expect(deleteMedia(db, cast.superuser, item.publicId)).toEqual({ ok: false, reason: "not_found" });
