@@ -146,6 +146,28 @@ export const entries = sqliteTable(
   ],
 );
 
+/** Keywords describing entries (plage, randonnée...), shared by all trips. */
+export const tags = sqliteTable("tags", {
+  id: id(),
+  name: text("name").notNull(),
+  /** Case- and accent-insensitive key: two tags cannot differ only by those. Used in filter URLs. */
+  slug: text("slug").notNull().unique(),
+  createdAt: createdAt(),
+});
+
+export const entryTags = sqliteTable(
+  "entry_tags",
+  {
+    entryId: integer("entry_id")
+      .notNull()
+      .references(() => entries.id, { onDelete: "cascade" }),
+    tagId: integer("tag_id")
+      .notNull()
+      .references(() => tags.id, { onDelete: "cascade" }),
+  },
+  (t) => [primaryKey({ columns: [t.entryId, t.tagId] }), index("entry_tags_tag_idx").on(t.tagId)],
+);
+
 /** Users identified ("tagged") in an entry. */
 export const entryPeople = sqliteTable(
   "entry_people",

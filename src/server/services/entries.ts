@@ -4,6 +4,7 @@ import type { Db } from "@/server/db/client";
 import { entries, entryPeople, trips, users, type EntryStatus } from "@/server/db/schema";
 import { canCreateEntry, canEditEntry, canViewEntry, canViewTrip, canWriteEntries, type Actor } from "@/server/permissions";
 import { notifyEntryPublished, notifyNewlyTagged } from "./notifications";
+import { ensureTags, isValidTagName, setEntryTags, tagsExist, tagsOfEntries, type Tag } from "./tags";
 import type { Trip } from "./trips";
 
 export type Entry = typeof entries.$inferSelect;
@@ -21,6 +22,10 @@ export type EntryInput = {
   body: string;
   /** Users identified in the entry. */
   peopleIds: number[];
+  /** Existing tags chosen. Leave both tag fields out to keep the current tags. */
+  tagIds?: number[];
+  /** New tags typed by the author, created on save. */
+  newTags?: string[];
   /** Fixed place, or start of a one-way route. */
   pointA: PointInput | null;
   /** End of a one-way route. */
@@ -42,15 +47,17 @@ export type EntryIssue =
   | "point_b_requires_a"
   | "location_required"
   | "people_required"
-  | "invalid_people";
+  | "invalid_people"
+  | "invalid_tags"
+  | "invalid_tag_name";
 
-export type EntryListItem = Pick<Entry, "id" | "date" | "title" | "status" | "authorId"> & { authorName: string };
-export type EntryDetail = { entry: Entry; author: Person; people: Person[] };
+export type EntryListItem = Pick<Entry, "id" | "date" | "title" | "status" | "authorId"> & { authorName: string; tags: Tag[] };
+export type EntryDetail = { entry: Entry; author: Person; people: Person[]; tags: Tag[] };
 
 /** Entries of a trip the actor may see, most recent day first. */
 export function listEntries(db: Db, actor: Actor, trip: Trip): EntryListItem[] {
   if (!canViewTrip(actor, trip)) return [];
-  return db
+  const visible = db
     .select({
       id: entries.id,
       date: entries.date,
@@ -65,6 +72,8 @@ export function listEntries(db: Db, actor: Actor, trip: Trip): EntryListItem[] {
     .orderBy(desc(entries.date), desc(entries.id))
     .all()
     .filter((entry) => canViewEntry(actor, trip, entry));
+  const tagsByEntry = tagsOfEntries(db, visible.map((entry) => entry.id));
+  return visible.map((entry) => ({ ...entry, tags: tagsByEntry.get(entry.id) ?? [] }));
 }
 
 /** An entry the actor cannot see is reported exactly like one that does not exist. */
@@ -84,7 +93,8 @@ export function getEntry(db: Db, actor: Actor, trip: Trip, entryId: number): Ent
     .where(eq(entryPeople.entryId, entryId))
     .orderBy(asc(sql`lower(${users.displayName})`))
     .all();
-  return { entry: row.entry, author: { id: row.entry.authorId, displayName: row.authorName }, people };
+  const tags = tagsOfEntries(db, [entryId]).get(entryId) ?? [];
+  return { entry: row.entry, author: { id: row.entry.authorId, displayName: row.authorName }, people, tags };
 }
 
 /** Accounts that can be identified in an entry, for people allowed to write one. */
@@ -128,7 +138,15 @@ function validate(db: Db, input: EntryInput, resultingStatus: EntryStatus): Entr
     const known = db.select({ id: users.id }).from(users).where(inArray(users.id, peopleIds)).all();
     if (known.length !== peopleIds.length) return "invalid_people";
   }
+  if (input.tagIds && !tagsExist(db, input.tagIds)) return "invalid_tags";
+  if (input.newTags && !input.newTags.every(isValidTagName)) return "invalid_tag_name";
   return null;
+}
+
+/** Applies the chosen and newly typed tags, unless the input leaves tags out. */
+function applyTags(db: Db, entryId: number, input: EntryInput, now: Date): void {
+  if (input.tagIds === undefined && input.newTags === undefined) return;
+  setEntryTags(db, entryId, [...(input.tagIds ?? []), ...ensureTags(db, input.newTags ?? [], now)]);
 }
 
 function entryValues(input: EntryInput) {
@@ -188,6 +206,7 @@ export function createEntry(
       .returning()
       .get();
     replacePeople(tx as unknown as Db, created.id, input.peopleIds);
+    applyTags(tx as unknown as Db, created.id, input, now);
     if (status === "published") notifyEntryPublished(tx as unknown as Db, actor.id, trip, created, now);
     return created;
   });
@@ -237,6 +256,7 @@ export function updateEntry(
       .returning()
       .get();
     replacePeople(tx as unknown as Db, entryId, input.peopleIds);
+    applyTags(tx as unknown as Db, entryId, input, now);
     // Only the first publication notifies: unpublishing and publishing again does not.
     const isFirstPublication = found.entry.publishedAt === null && status === "published";
     if (updated && actor && isFirstPublication) notifyEntryPublished(tx as unknown as Db, actor.id, found.trip, updated, now);

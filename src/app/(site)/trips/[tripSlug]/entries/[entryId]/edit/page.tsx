@@ -11,6 +11,7 @@ import { loadEntry } from "@/server/page-data";
 import { canEditEntry } from "@/server/permissions";
 import { listTaggableUsers, listTripMapEntries } from "@/server/services/entries";
 import { listEntryMedia } from "@/server/services/media";
+import { listTags } from "@/server/services/tags";
 
 export const metadata: Metadata = { title: "Modifier l'entrée" };
 
@@ -44,6 +45,7 @@ export default async function EditEntryPage({ params }: { params: Promise<{ trip
         tripId={trip.id}
         people={options}
         tripPoints={listTripMapEntries(getDb(), viewer, trip).map((item) => item.pointA)}
+        tags={listTags(getDb(), viewer)}
         entry={{
           id: entry.id,
           date: entry.date,
@@ -53,6 +55,7 @@ export default async function EditEntryPage({ params }: { params: Promise<{ trip
           pointA: { lat: entry.pointALat, lng: entry.pointALng, name: entry.pointAName },
           pointB: { lat: entry.pointBLat, lng: entry.pointBLng, name: entry.pointBName },
           peopleIds: people.map((person) => person.id),
+          tagIds: detail.tags.map((tag) => tag.id),
         }}
       />
 

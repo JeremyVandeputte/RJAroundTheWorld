@@ -35,7 +35,13 @@ function readEntryInput(formData: FormData): EntryInput {
   const peopleIds = formData
     .getAll("people")
     .map((value) => (typeof value === "string" && /^[1-9]\d{0,14}$/.test(value) ? Number(value) : Number.NaN));
+  const tagIds = formData
+    .getAll("tags")
+    .map((value) => (typeof value === "string" && /^[1-9]\d{0,14}$/.test(value) ? Number(value) : Number.NaN));
+  const newTags = formData.getAll("newTags").filter((value): value is string => typeof value === "string");
   return {
+    tagIds,
+    newTags,
     date: formString(formData, "date"),
     title: formString(formData, "title"),
     body: formString(formData, "body"),

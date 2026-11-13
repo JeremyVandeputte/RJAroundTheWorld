@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { MediaGallery } from "@/components/entry/media-gallery";
 import { RichText } from "@/components/entry/rich-text";
 import { TripMap } from "@/components/map/trip-map";
+import { TagList } from "@/components/tags/tag-list";
 import { SocialSection } from "@/components/social/social-section";
 import { Badge } from "@/components/ui/badge";
 import { LinkButton } from "@/components/ui/link-button";
@@ -56,6 +57,11 @@ export default async function EntryPage({ params }: EntryPageProps) {
         ) : null}
         {people.length > 0 ? (
           <p className="mt-1 text-sm text-muted">Avec {people.map((person) => person.displayName).join(", ")}</p>
+        ) : null}
+        {detail.tags.length > 0 ? (
+          <div className="mt-3">
+            <TagList tags={detail.tags} tripSlug={trip.slug} />
+          </div>
         ) : null}
       </header>
 

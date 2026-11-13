@@ -49,6 +49,16 @@ export const messages = {
     location_required: "Un lieu (point A) est nécessaire pour qu'une entrée soit publiée.",
     people_required: "Identifiez au moins une personne pour qu'une entrée soit publiée.",
     invalid_people: "Une des personnes identifiées n'existe pas.",
+    invalid_tags: "Un des tags choisis n'existe plus. Rechargez la page.",
+    invalid_tag_name: "Un tag doit contenir entre 1 et 30 caractères, dont au moins une lettre ou un chiffre.",
+  },
+  tag: {
+    forbidden: "Seul l'administrateur peut gérer les tags.",
+    tag_not_found: "Ce tag n'existe plus.",
+    invalid_tag_name: "Un tag doit contenir entre 1 et 30 caractères, dont au moins une lettre ou un chiffre.",
+    tag_exists: "Un tag de ce nom existe déjà.",
+    created: "Tag créé.",
+    renamed: "Tag renommé.",
   },
   comment: {
     not_found: "Cette entrée n'existe pas.",

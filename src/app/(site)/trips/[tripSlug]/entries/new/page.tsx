@@ -6,6 +6,7 @@ import { getDb } from "@/server/db/client";
 import { loadTrip } from "@/server/page-data";
 import { canCreateEntry } from "@/server/permissions";
 import { listTaggableUsers, listTripMapEntries } from "@/server/services/entries";
+import { listTags } from "@/server/services/tags";
 
 export const metadata: Metadata = { title: "Nouvelle entrée" };
 
@@ -22,6 +23,7 @@ export default async function NewEntryPage({ params }: { params: Promise<{ tripS
         tripId={trip.id}
         people={listTaggableUsers(getDb(), viewer)}
         tripPoints={listTripMapEntries(getDb(), viewer, trip).map((entry) => entry.pointA)}
+        tags={listTags(getDb(), viewer)}
       />
     </div>
   );

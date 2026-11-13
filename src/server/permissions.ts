@@ -56,6 +56,16 @@ export function canManageUsers(actor: Actor): boolean {
   return isSuperuser(effectiveUser(actor));
 }
 
+/** Any usable account (logged in, active, password not waiting to be changed). */
+export function canUseSite(actor: Actor): boolean {
+  return effectiveUser(actor) !== null;
+}
+
+/** Renaming and deleting tags, which affects every entry using them. */
+export function canManageTags(actor: Actor): boolean {
+  return isSuperuser(effectiveUser(actor));
+}
+
 export function canCreateTrip(actor: Actor): boolean {
   const user = effectiveUser(actor);
   return user !== null && (isSuperuser(user) || user.canManageTrips);

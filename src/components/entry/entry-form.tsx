@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { LocationPicker } from "@/components/map/location-picker";
+import { TagPicker } from "@/components/tags/tag-picker";
 import { FormMessage } from "@/components/ui/form-message";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { TextField } from "@/components/ui/text-field";
@@ -23,18 +24,21 @@ type EntryFormProps = {
     pointA: Point;
     pointB: Point;
     peopleIds: number[];
+    tagIds: number[];
   };
   /** Accounts that can be identified in the entry. */
   people: { id: number; displayName: string }[];
   /** Places already used in this trip: where the map opens for an entry without a place. */
   tripPoints: { lat: number; lng: number }[];
+  /** Every existing tag. */
+  tags: { id: number; name: string; slug: string }[];
 };
 
 function toPickerPoint(point: Point | undefined) {
   return point && point.lat !== null && point.lng !== null ? { lat: point.lat, lng: point.lng, name: point.name } : null;
 }
 
-export function EntryForm({ tripId, entry, people, tripPoints }: EntryFormProps) {
+export function EntryForm({ tripId, entry, people, tripPoints, tags }: EntryFormProps) {
   const { state, pending, formProps } = usePersistentForm(saveEntryAction);
   const dateInput = useRef<HTMLInputElement>(null);
 
@@ -89,6 +93,8 @@ export function EntryForm({ tripId, entry, people, tripPoints }: EntryFormProps)
           </div>
         </fieldset>
       ) : null}
+
+      <TagPicker tags={tags} selectedIds={entry?.tagIds ?? []} />
 
       <LocationPicker
         initialA={toPickerPoint(entry?.pointA)}

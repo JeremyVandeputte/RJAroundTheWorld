@@ -3,16 +3,19 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CreateUserForm } from "@/components/admin/create-user-form";
 import { permissionSummary, UserBadges } from "@/components/admin/user-badges";
+import { TagAdmin } from "@/components/admin/tag-admin";
 import { CopyButton } from "@/components/ui/copy-button";
 import { getEnv } from "@/lib/env";
 import { getViewer } from "@/server/auth/current-user";
 import { getDb } from "@/server/db/client";
 import { listUsers } from "@/server/services/admin";
+import { listTagsWithUsage } from "@/server/services/tags";
 
 export const metadata: Metadata = { title: "Administration" };
 
 export default async function AdminPage() {
-  const result = listUsers(getDb(), await getViewer());
+  const viewer = await getViewer();
+  const result = listUsers(getDb(), viewer);
   // Same answer as an unknown page: the administration is not advertised.
   if (!result.ok) notFound();
 
@@ -51,6 +54,16 @@ export default async function AdminPage() {
           Un mot de passe temporaire est généré et affiché une seule fois, juste après la création.
         </p>
         <CreateUserForm />
+      </section>
+
+      <section aria-labelledby="tags-title" className="max-w-xl">
+        <h2 id="tags-title" className="text-lg font-semibold">
+          Tags
+        </h2>
+        <p className="mt-1 mb-4 text-sm text-muted">
+          Les personnes qui ont la permission Publier peuvent aussi créer des tags en écrivant une entrée.
+        </p>
+        <TagAdmin tags={listTagsWithUsage(getDb(), viewer) ?? []} />
       </section>
 
       <section aria-labelledby="link-title">

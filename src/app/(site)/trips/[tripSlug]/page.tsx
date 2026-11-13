@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { TagList } from "@/components/tags/tag-list";
 import { Badge } from "@/components/ui/badge";
 import { LinkButton } from "@/components/ui/link-button";
 import { formatDate, formatDateRange } from "@/lib/dates";
@@ -73,6 +74,11 @@ export default async function TripPage({ params }: TripPageProps) {
                       {entry.status === "draft" ? <Badge tone="warning">Brouillon</Badge> : null}
                     </span>
                     <span className="mt-0.5 block text-sm text-muted">par {entry.authorName}</span>
+                    {entry.tags.length > 0 ? (
+                      <span className="mt-1.5 block">
+                        <TagList tags={entry.tags} small />
+                      </span>
+                    ) : null}
                   </span>
                   {covers.has(entry.id) ? (
                     <img
