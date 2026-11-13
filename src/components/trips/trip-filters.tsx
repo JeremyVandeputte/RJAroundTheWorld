@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { FormEvent } from "react";
-import { formatDate } from "@/lib/dates";
+import { useEffect, useState, type FormEvent } from "react";
+import { ChevronDownIcon, CloseIcon, FilterIcon } from "@/components/ui/icons";
+import { formatDate, formatShortDate } from "@/lib/dates";
 import { filtersToQuery, hasActiveFilters, type TripFilters } from "@/lib/trip-filters";
 
 type TripFiltersFormProps = {
@@ -14,101 +15,186 @@ type TripFiltersFormProps = {
   filters: TripFilters;
 };
 
-const chip =
-  "inline-flex min-h-9 cursor-pointer items-center rounded-full border px-3 text-sm has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-accent/40";
+const pill =
+  "inline-flex min-h-9 shrink-0 cursor-pointer items-center rounded-full border px-3 text-sm whitespace-nowrap has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-accent/40";
+const pillOn = "border-accent bg-accent text-white";
+const pillOff = "border-line bg-white text-ink hover:border-accent";
 
 /**
- * Filters by day and by tags. A plain GET form (works without JavaScript);
- * with JavaScript, every change is applied at once.
+ * Filters by day and by tags: a bar that opens a panel of buttons, and the
+ * active filters shown as chips that remove themselves when touched. A
+ * plain GET form (works without JavaScript); with JavaScript, every change
+ * is applied at once and the panel stays open while choosing.
  */
 export function TripFiltersForm({ basePath, days, tags, filters }: TripFiltersFormProps) {
   const router = useRouter();
-  const active = hasActiveFilters(filters);
-  const count = (filters.date ? 1 : 0) + filters.tagSlugs.length;
+  // Shown at once when touched, before the page has caught up.
+  const [current, setCurrent] = useState(filters);
+  const [open, setOpen] = useState(false);
+  const query = filtersToQuery(filters);
+  // Follow the address (back button, links): compared as text, not as an object.
+  useEffect(() => {
+    setCurrent(filters);
+  }, [query]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function apply(form: HTMLFormElement) {
-    const data = new FormData(form);
-    const date = data.get("jour");
-    const next: TripFilters = {
-      date: typeof date === "string" && date ? date : null,
-      tagSlugs: data.getAll("tags").filter((value): value is string => typeof value === "string"),
-    };
+  if (days.length === 0 && tags.length === 0) return null;
+
+  const active = hasActiveFilters(current);
+  const count = (current.date ? 1 : 0) + current.tagSlugs.length;
+  const tagName = (slug: string) => tags.find((tag) => tag.slug === slug)?.name ?? slug;
+
+  function apply(next: TripFilters) {
+    setCurrent(next);
     router.replace(`${basePath}${filtersToQuery(next)}`, { scroll: false });
+  }
+
+  function toggleTag(slug: string) {
+    const tagSlugs = current.tagSlugs.includes(slug)
+      ? current.tagSlugs.filter((item) => item !== slug)
+      : [...current.tagSlugs, slug];
+    apply({ ...current, tagSlugs });
   }
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    apply(event.currentTarget);
   }
 
-  if (days.length === 0 && tags.length === 0) return null;
+  // Address of the page without one of the active filters (works without JavaScript).
+  const without = (next: TripFilters) => `${basePath}${filtersToQuery(next)}`;
 
   return (
-    <details open={active} className="rounded-md border border-line bg-white">
-      <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-3 px-4 py-2 font-medium">
-        <span>Filtrer{active ? ` (${count})` : ""}</span>
-        {active ? (
-          <Link href={basePath} scroll={false} className="text-sm font-normal text-accent underline-offset-4 hover:underline">
-            Effacer les filtres
-          </Link>
-        ) : null}
-      </summary>
-      <form
-        method="get"
-        action={basePath}
-        onSubmit={onSubmit}
-        onChange={(event) => apply(event.currentTarget)}
-        className="space-y-4 border-t border-line px-4 py-3"
+    <div className="space-y-2">
+      <details
+        open={open}
+        onToggle={(event) => setOpen(event.currentTarget.open)}
+        className="group rounded-md border border-line bg-white open:shadow-sm"
       >
-        {days.length > 0 ? (
-          <div>
-            <label htmlFor="filter-day" className="block text-sm font-medium">
-              Jour
-            </label>
-            <select
-              id="filter-day"
-              name="jour"
-              defaultValue={filters.date ?? ""}
-              className="mt-1 block w-full rounded-md border border-line bg-white px-3 py-2 text-base"
+        <summary className="flex min-h-12 cursor-pointer list-none items-center gap-3 rounded-md px-4 py-2 font-medium hover:bg-paper [&::-webkit-details-marker]:hidden">
+          <FilterIcon className="size-5 text-accent" />
+          <span className="flex-1">
+            Filtrer par jour ou par tag
+            {count > 0 ? (
+              <span className="ml-2 inline-flex min-w-6 items-center justify-center rounded-full bg-accent px-1.5 text-xs leading-6 font-semibold text-white">
+                <span className="sr-only">filtres actifs : </span>
+                {count}
+              </span>
+            ) : null}
+          </span>
+          <ChevronDownIcon className="size-5 text-muted transition-transform group-open:rotate-180" />
+        </summary>
+
+        <form method="get" action={basePath} onSubmit={onSubmit} className="space-y-4 border-t border-line px-4 py-3">
+          {days.length > 0 ? (
+            <fieldset>
+              <legend className="text-sm font-medium">Jour</legend>
+              {/* One line that scrolls sideways, however long the trip. */}
+              <div className="-mx-4 mt-2 flex gap-2 overflow-x-auto px-4 pb-1">
+                {["", ...days].map((day) => {
+                  const isChecked = (current.date ?? "") === day;
+                  return (
+                    <label key={day || "all"} title={day ? formatDate(day) : undefined} className={`${pill} ${isChecked ? pillOn : pillOff}`}>
+                      <input
+                        type="radio"
+                        name="jour"
+                        value={day}
+                        checked={isChecked}
+                        onChange={() => apply({ ...current, date: day || null })}
+                        className="sr-only"
+                      />
+                      {day ? formatShortDate(day) : "Tous les jours"}
+                    </label>
+                  );
+                })}
+              </div>
+            </fieldset>
+          ) : null}
+
+          {tags.length > 0 ? (
+            <fieldset>
+              <legend className="text-sm font-medium">Tags</legend>
+              <p className="text-sm text-muted">Les entrées qui ont au moins un des tags choisis.</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {tags.map((tag) => {
+                  const isChecked = current.tagSlugs.includes(tag.slug);
+                  return (
+                    <label key={tag.slug} className={`${pill} ${isChecked ? pillOn : pillOff}`}>
+                      <input
+                        type="checkbox"
+                        name="tags"
+                        value={tag.slug}
+                        checked={isChecked}
+                        onChange={() => toggleTag(tag.slug)}
+                        className="sr-only"
+                      />
+                      {tag.name}
+                    </label>
+                  );
+                })}
+              </div>
+            </fieldset>
+          ) : null}
+
+          {/* Without JavaScript the form is sent with this button. */}
+          <noscript>
+            <button type="submit" className="inline-flex min-h-11 items-center rounded-md border border-line bg-white px-4 font-medium">
+              Appliquer
+            </button>
+          </noscript>
+        </form>
+      </details>
+
+      {active ? (
+        <ul aria-label="Filtres actifs" className="flex flex-wrap items-center gap-2">
+          {current.date ? (
+            <li>
+              <ActiveChip href={without({ ...current, date: null })} label={`Retirer le filtre ${formatDate(current.date)}`} onRemove={() => apply({ ...current, date: null })}>
+                {formatShortDate(current.date)}
+              </ActiveChip>
+            </li>
+          ) : null}
+          {current.tagSlugs.map((slug) => (
+            <li key={slug}>
+              <ActiveChip
+                href={without({ ...current, tagSlugs: current.tagSlugs.filter((item) => item !== slug) })}
+                label={`Retirer le tag ${tagName(slug)}`}
+                onRemove={() => toggleTag(slug)}
+              >
+                {tagName(slug)}
+              </ActiveChip>
+            </li>
+          ))}
+          <li>
+            <Link
+              href={basePath}
+              scroll={false}
+              onClick={() => setCurrent({ date: null, tagSlugs: [] })}
+              className="inline-flex min-h-9 items-center px-1 text-sm text-accent underline-offset-4 hover:underline"
             >
-              <option value="">Tous les jours</option>
-              {days.map((day) => (
-                <option key={day} value={day}>
-                  {formatDate(day)}
-                </option>
-              ))}
-            </select>
-          </div>
-        ) : null}
+              Tout effacer
+            </Link>
+          </li>
+        </ul>
+      ) : null}
+    </div>
+  );
+}
 
-        {tags.length > 0 ? (
-          <fieldset>
-            <legend className="text-sm font-medium">Tags</legend>
-            <p className="text-sm text-muted">Les entrées qui ont au moins un des tags choisis.</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {tags.map((tag) => {
-                const isChecked = filters.tagSlugs.includes(tag.slug);
-                return (
-                  <label
-                    key={tag.slug}
-                    className={`${chip} has-[:checked]:border-accent has-[:checked]:bg-accent has-[:checked]:text-white ${isChecked ? "" : "border-line bg-white text-ink hover:border-accent"}`}
-                  >
-                    <input type="checkbox" name="tags" value={tag.slug} defaultChecked={isChecked} className="sr-only" />
-                    {tag.name}
-                  </label>
-                );
-              })}
-            </div>
-          </fieldset>
-        ) : null}
-
-        {/* Without JavaScript the form is sent with this button. */}
-        <noscript>
-          <button type="submit" className="inline-flex min-h-11 items-center rounded-md border border-line bg-white px-4 font-medium">
-            Appliquer
-          </button>
-        </noscript>
-      </form>
-    </details>
+/** An active filter: touching it removes it. */
+function ActiveChip({ href, label, onRemove, children }: { href: string; label: string; onRemove: () => void; children: string }) {
+  return (
+    <Link
+      href={href}
+      scroll={false}
+      replace
+      aria-label={label}
+      onClick={(event) => {
+        event.preventDefault();
+        onRemove();
+      }}
+      className="inline-flex min-h-9 items-center gap-1.5 rounded-full bg-accent/10 py-1 pr-2 pl-3 text-sm font-medium text-accent hover:bg-accent/20"
+    >
+      {children}
+      <CloseIcon className="size-4" />
+    </Link>
   );
 }

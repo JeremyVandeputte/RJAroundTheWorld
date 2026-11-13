@@ -27,3 +27,11 @@ export function formatDate(value: string): string {
 export function formatDateRange(start: string, end: string): string {
   return start === end ? formatDate(start) : `Du ${formatDate(start)} au ${formatDate(end)}`;
 }
+
+const shortFormat = new Intl.DateTimeFormat("fr-FR", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+
+/** "2026-11-14" becomes "sam. 14 nov.": compact, for filter buttons. */
+export function formatShortDate(value: string): string {
+  const date = toUtcDate(value);
+  return date ? shortFormat.format(date) : value;
+}

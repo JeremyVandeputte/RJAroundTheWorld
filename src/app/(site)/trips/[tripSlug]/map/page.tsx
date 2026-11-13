@@ -35,9 +35,7 @@ export default async function TripMapPage({ params, searchParams }: TripMapPageP
         <h1 className="mt-2 text-2xl font-semibold tracking-tight">Carte</h1>
       </div>
 
-      <TripFiltersForm
-        key={filtersToQuery(filters)}
-        basePath={`/trips/${trip.slug}/map`} days={options.days} tags={options.tags} filters={filters} />
+      <TripFiltersForm basePath={`/trips/${trip.slug}/map`} days={options.days} tags={options.tags} filters={filters} />
 
       {entries.length === 0 ? (
         <p className="text-muted">

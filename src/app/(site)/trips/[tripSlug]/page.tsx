@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { TagList } from "@/components/tags/tag-list";
 import { TripFiltersForm } from "@/components/trips/trip-filters";
 import { Badge } from "@/components/ui/badge";
+import { DownloadIcon, MapIcon, PencilIcon, PlusIcon } from "@/components/ui/icons";
 import { LinkButton } from "@/components/ui/link-button";
 import { formatDate, formatDateRange } from "@/lib/dates";
 import { mediaUrl, thumbnailUrl } from "@/lib/media-url";
@@ -13,6 +14,8 @@ import { loadTrip } from "@/server/page-data";
 import { canCreateEntry, canEditTrip, canExportTrip } from "@/server/permissions";
 import { listEntries, listTripFilterOptions } from "@/server/services/entries";
 import { listCoverPhotos, listTripCovers } from "@/server/services/media";
+
+const manageLink = "inline-flex min-h-11 items-center gap-1.5 text-accent underline-offset-4 hover:underline";
 
 type TripPageProps = {
   params: Promise<{ tripSlug: string }>;
@@ -31,6 +34,9 @@ export default async function TripPage({ params, searchParams }: TripPageProps) 
   const options = listTripFilterOptions(getDb(), viewer, trip);
   const entries = listEntries(getDb(), viewer, trip, filters);
   const isFiltered = hasActiveFilters(filters);
+  const canWrite = canCreateEntry(viewer, trip);
+  const canManage = canEditTrip(viewer, trip);
+  const canExport = canExportTrip(viewer, trip);
   const cover = listTripCovers(getDb(), [trip]).get(trip.id) ?? null;
   // Covers are looked up only for the entries this viewer is allowed to see.
   const covers = listCoverPhotos(
@@ -60,29 +66,47 @@ export default async function TripPage({ params, searchParams }: TripPageProps) 
         {trip.description ? <p className="mt-3">{trip.description}</p> : null}
       </div>
 
-      <div className="flex flex-wrap gap-3">
-        <LinkButton href={`/trips/${trip.slug}/map${filtersToQuery(filters)}`}>Carte</LinkButton>
-        {canCreateEntry(viewer, trip) ? (
-          <LinkButton href={`/trips/${trip.slug}/entries/new`} variant="primary">
-            Nouvelle entrée
+      {/* Everyday actions first, as large buttons; managing the trip apart, below. */}
+      <div className="space-y-3">
+        <div className={`grid gap-3 ${canWrite ? "grid-cols-2" : "grid-cols-1 sm:max-w-xs"}`}>
+          {canWrite ? (
+            <LinkButton href={`/trips/${trip.slug}/entries/new`} variant="primary">
+              <PlusIcon className="mr-2 size-5" />
+              Nouvelle entrée
+            </LinkButton>
+          ) : null}
+          <LinkButton href={`/trips/${trip.slug}/map${filtersToQuery(filters)}`}>
+            <MapIcon className="mr-2 size-5 text-accent" />
+            Carte
           </LinkButton>
-        ) : null}
-        {canEditTrip(viewer, trip) ? <LinkButton href={`/trips/${trip.slug}/edit`}>Modifier le voyage</LinkButton> : null}
-      </div>
-      {canExportTrip(viewer, trip) ? (
-        <p className="-mt-3 text-sm">
-          {/* A plain link: the archive is downloaded, not opened as a page. */}
-          <a href={`/api/trips/${trip.id}/export`} download className="text-accent underline-offset-4 hover:underline">
-            Télécharger le voyage (archive ZIP)
-          </a>
-          <span className="text-muted"> : page lisible hors ligne, photos et vidéos.</span>
-        </p>
-      ) : null}
+        </div>
 
-      <TripFiltersForm
-        // Remount when the address changes, so the controls match the filters applied.
-        key={filtersToQuery(filters)}
-        basePath={`/trips/${trip.slug}`} days={options.days} tags={options.tags} filters={filters} />
+        {canManage || canExport ? (
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 rounded-md border border-line bg-white/60 px-3 py-1 text-sm">
+            <span className="w-full pt-1.5 text-xs font-medium tracking-wide text-muted uppercase sm:w-auto sm:pt-0">Gestion du voyage</span>
+            {canManage ? (
+              <Link href={`/trips/${trip.slug}/edit`} className={manageLink}>
+                <PencilIcon className="size-4" />
+                Modifier le voyage
+              </Link>
+            ) : null}
+            {canExport ? (
+              // A plain link: the archive is downloaded, not opened as a page.
+              <a
+                href={`/api/trips/${trip.id}/export`}
+                download
+                title="Page lisible hors ligne, photos et vidéos"
+                className={manageLink}
+              >
+                <DownloadIcon className="size-4" />
+                Télécharger (ZIP)
+              </a>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+
+      <TripFiltersForm basePath={`/trips/${trip.slug}`} days={options.days} tags={options.tags} filters={filters} />
 
       <section aria-labelledby="entries-title">
         <h2 id="entries-title" className="text-lg font-semibold">

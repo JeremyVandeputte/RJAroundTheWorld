@@ -145,7 +145,7 @@ Tout ce qui concerne les entrées, commentaires et réactions ne vaut que dans l
 
 ### Exporter un voyage
 
-Réservé aux personnes qui gèrent le voyage (son auteur, tant qu'il a « Gérer les voyages », et le superuser) : les autres ne voient pas le lien. Sur la page du voyage, « Télécharger le voyage (archive ZIP) » produit une archive `<voyage>.zip` contenant :
+Réservé aux personnes qui gèrent le voyage (son auteur, tant qu'il a « Gérer les voyages », et le superuser) : les autres ne voient pas le lien. Sur la page du voyage, « Télécharger (ZIP) », dans le bandeau « Gestion du voyage », produit une archive `<voyage>.zip` contenant :
 
 - `index.html` : tout le voyage sur une seule page, lisible hors ligne dans n'importe quel navigateur (miniature, entrées de la plus ancienne à la plus récente, texte, lieux, personnes, tags, photos, vidéos et commentaires). Elle ne contacte aucun serveur ; les lieux sont des liens vers OpenStreetMap, ouverts seulement si on les touche. Pour un PDF, ouvrir cette page et choisir « Imprimer » puis « Enregistrer au format PDF » (les vidéos sont alors omises).
 - `media/` : les photos et vidéos telles qu'elles sont stockées sur le site, avec des noms lisibles (`2026-11-11-plage-des-salines.jpg`).
@@ -155,12 +155,12 @@ L'archive contient les entrées publiées (jamais les brouillons) et leurs comme
 
 ### Filtres
 
-Le journal et la carte d'un voyage ont un bloc « Filtrer » :
+Le journal et la carte d'un voyage ont une barre « Filtrer par jour ou par tag », qui ouvre un panneau ; une pastille y indique le nombre de filtres actifs.
 
-- **Jour** : un jour parmi ceux qui ont des entrées.
+- **Jour** : des boutons, un par jour qui a des entrées (la ligne défile sur le côté pour un long voyage), plus « Tous les jours ».
 - **Tags** : un ou plusieurs ; une entrée est gardée si elle a au moins un des tags choisis.
-- Les filtres s'appliquent dès qu'on les change, s'affichent dans l'adresse de la page (`?jour=2026-11-14&tags=plage,randonnee`) et passent du journal à la carte. Une vue filtrée peut donc être rechargée ou envoyée à quelqu'un.
-- « Effacer les filtres » revient à toutes les entrées.
+- Les filtres s'appliquent dès qu'on les touche, le panneau restant ouvert pour en choisir plusieurs. Ils s'affichent dans l'adresse de la page (`?jour=2026-11-14&tags=plage,randonnee`) et passent du journal à la carte : une vue filtrée peut être rechargée ou envoyée à quelqu'un.
+- Les filtres actifs apparaissent sous la barre, même panneau fermé : toucher l'un d'eux le retire ; « Tout effacer » revient à toutes les entrées.
 
 ### Photos et vidéos
 
