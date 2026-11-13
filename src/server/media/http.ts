@@ -40,7 +40,7 @@ export function uploadResponse(result: UploadResult, kind: MediaKind): Response 
   const noStore = { "Cache-Control": "no-store" };
   if (result.ok) {
     return result.status === "complete"
-      ? Response.json({ media: result.media }, { status: 201, headers: noStore })
+      ? Response.json({ media: { ...result.media, position: result.position ?? null } }, { status: 201, headers: noStore })
       : Response.json({ uploadId: result.uploadId, received: result.received }, { status: 202, headers: noStore });
   }
 

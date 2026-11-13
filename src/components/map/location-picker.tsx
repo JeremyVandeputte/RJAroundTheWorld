@@ -4,6 +4,8 @@ import "leaflet/dist/leaflet.css";
 import type * as Leaflet from "leaflet";
 import { useEffect, useRef, useState } from "react";
 import { TextField } from "@/components/ui/text-field";
+import { thumbnailUrl } from "@/lib/media-url";
+import type { PhotoPosition } from "@/lib/photo-position";
 import { createBaseMap, fitToPoints, loadLeaflet, pinIcon, type LatLng, type LeafletModule } from "./leaflet-setup";
 
 type PointKey = "A" | "B";
@@ -13,6 +15,8 @@ type LocationPickerProps = {
   initialB: (LatLng & { name: string | null }) | null;
   /** Places of the trip's other entries: where the map opens when this entry has none yet. */
   contextPoints: LatLng[];
+  /** Photos of the entry that carry a GPS position, oldest first: one touch places a point there. */
+  photoPositions?: PhotoPosition[];
 };
 
 /** Six decimals is about 10 cm: plenty, and it keeps the stored values short. */
@@ -27,7 +31,7 @@ const unselected = "border-line bg-white text-ink hover:bg-paper";
  * fixed place, or A then B for a one-way route. Markers can be dragged.
  * The coordinates travel with the form through hidden fields.
  */
-export function LocationPicker({ initialA, initialB, contextPoints }: LocationPickerProps) {
+export function LocationPicker({ initialA, initialB, contextPoints, photoPositions = [] }: LocationPickerProps) {
   const [pointA, setPointA] = useState<LatLng | null>(initialA);
   const [pointB, setPointB] = useState<LatLng | null>(initialB);
   const [active, setActive] = useState<PointKey>("A");
@@ -52,7 +56,7 @@ export function LocationPicker({ initialA, initialB, contextPoints }: LocationPi
       if (cancelled || !container.current) return;
       map = createBaseMap(L, container.current, { scrollWheelZoom: false });
       const initial = [initialA, initialB].filter((point): point is NonNullable<typeof point> => point !== null);
-      fitToPoints(map, initial.length > 0 ? initial : contextPoints);
+      fitToPoints(map, initial.length > 0 ? initial : photoPositions.length > 0 ? photoPositions : contextPoints);
 
       map.on("click", (event: Leaflet.LeafletMouseEvent) => {
         const point = { lat: round(event.latlng.lat), lng: round(event.latlng.lng) };
@@ -118,6 +122,33 @@ export function LocationPicker({ initialA, initialB, contextPoints }: LocationPi
     setActive("A");
   }
 
+  /** The point being placed: B only once A exists. */
+  const target: PointKey = active === "B" && pointA ? "B" : "A";
+
+  function placeFromPhoto(photo: PhotoPosition) {
+    const point = { lat: round(photo.lat), lng: round(photo.lng) };
+    if (target === "B") setPointB(point);
+    else setPointA(point);
+    const map = leaflet.current?.map;
+    map?.setView([point.lat, point.lng], Math.max(map.getZoom(), 13));
+  }
+
+  // A route from where the first photo was taken to where the last one was.
+  const firstPhoto = photoPositions[0];
+  const lastPhoto = photoPositions.at(-1);
+  const canTraceRoute =
+    firstPhoto !== undefined && lastPhoto !== undefined && (firstPhoto.lat !== lastPhoto.lat || firstPhoto.lng !== lastPhoto.lng);
+
+  function routeFromPhotos() {
+    if (!firstPhoto || !lastPhoto) return;
+    const start = { lat: round(firstPhoto.lat), lng: round(firstPhoto.lng) };
+    const end = { lat: round(lastPhoto.lat), lng: round(lastPhoto.lng) };
+    setPointA(start);
+    setPointB(end);
+    setActive("A");
+    if (leaflet.current) fitToPoints(leaflet.current.map, [start, end]);
+  }
+
   function locate() {
     setLocateError(null);
     navigator.geolocation.getCurrentPosition(
@@ -160,6 +191,34 @@ export function LocationPicker({ initialA, initialB, contextPoints }: LocationPi
           </button>
         ) : null}
       </div>
+
+      {photoPositions.length > 0 ? (
+        <div className="mb-3">
+          <p className="text-sm font-medium">Position des photos</p>
+          <p className="text-sm text-muted">
+            Touchez une photo pour placer {target === "B" ? "l'arrivée (point B)" : pointA ? "le point A" : "le lieu"} là où
+            elle a été prise.
+          </p>
+          <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
+            {photoPositions.map((photo, index) => (
+              <button
+                key={photo.publicId}
+                type="button"
+                onClick={() => placeFromPhoto(photo)}
+                aria-label={`Placer ${target === "B" ? "le point B" : "le point A"} à l'endroit de la photo ${index + 1}`}
+                className="size-14 shrink-0 overflow-hidden rounded-md border border-line bg-line hover:border-accent focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:outline-none"
+              >
+                <img src={thumbnailUrl(photo.publicId)} alt="" loading="lazy" className="size-full object-cover" />
+              </button>
+            ))}
+          </div>
+          {canTraceRoute ? (
+            <button type="button" onClick={routeFromPhotos} className={`${choice} ${unselected} mt-2`}>
+              Trajet de la première à la dernière photo
+            </button>
+          ) : null}
+        </div>
+      ) : null}
 
       <div ref={container} className="isolate h-80 w-full overflow-hidden rounded-md border border-line bg-line" />
       <p className="mt-2 text-sm text-muted" aria-live="polite">

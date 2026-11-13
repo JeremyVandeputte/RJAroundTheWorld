@@ -1,10 +1,12 @@
 import type { Env } from "@/lib/env";
+import type { PhotoPosition } from "@/lib/photo-position";
 import type { Db } from "@/server/db/client";
 import type { MediaKind } from "@/server/db/schema";
 import type { Actor } from "@/server/permissions";
 import {
   checkTripCoverUploadAllowed,
   checkUploadAllowed,
+  photoPosition,
   recordMedia,
   recordTripCover,
   type MediaItem,
@@ -37,7 +39,13 @@ export type UploadConfig = Pick<Env, "mediaDir" | "maxPhotoBytes" | "maxVideoByt
 
 export type UploadResult =
   /** The whole file has arrived and is stored. */
-  | { ok: true; status: "complete"; media: MediaItem }
+  | {
+      ok: true;
+      status: "complete";
+      media: MediaItem;
+      /** GPS position of an entry photo, for its author to place the entry. */
+      position?: PhotoPosition | null;
+    }
   /** More chunks are expected; `received` is the offset of the next one. */
   | { ok: true; status: "partial"; uploadId: string; received: number }
   | {
@@ -202,7 +210,13 @@ async function receiveChunk(
         exifLng: photo.exif.lng,
         exifTakenAt: photo.exif.takenAt,
       });
-      return { ok: true, status: "complete", media };
+      const position = photoPosition({
+        publicId,
+        exifLat: photo.exif.lat,
+        exifLng: photo.exif.lng,
+        exifTakenAt: photo.exif.takenAt,
+      });
+      return { ok: true, status: "complete", media, position };
     }
     const video = await storeVideo(source, destDir, publicId);
     const media = recordMedia(db, entryId!, actor.id, {

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { mediaUrl, thumbnailUrl } from "@/lib/media-url";
 import { createUpload, detectUploadKind, UploadError, type UploadedMedia, type UploadKind } from "@/lib/upload-client";
 import { chooseEntryCoverAction, deleteMediaAction } from "@/server/actions/media";
+import { usePhotoPositions } from "./photo-positions";
 
 type MediaManagerProps = {
   entryId: number;
@@ -35,6 +36,8 @@ function formatSize(bytes: number): string {
 /** Adds, lists and removes the photos and videos of an entry. Files are sent one after the other. */
 export function MediaManager({ entryId, initialItems, coverPublicId, maxPhotoBytes, maxVideoBytes }: MediaManagerProps) {
   const [items, setItems] = useState(initialItems);
+  // Positions of new photos are offered at once to place the entry (edit page).
+  const photoPositions = usePhotoPositions();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -74,6 +77,7 @@ export function MediaManager({ entryId, initialItems, coverPublicId, maxPhotoByt
         try {
           const media = await task.upload.run((sentBytes) => update(task.id, { sentBytes }));
           setItems((current) => [...current, media]);
+          if (media.position) photoPositions?.add(media.position);
           update(task.id, { status: "done", sentBytes: task.size });
         } catch (error) {
           const isUploadError = error instanceof UploadError;
@@ -128,6 +132,7 @@ export function MediaManager({ entryId, initialItems, coverPublicId, maxPhotoByt
         setDeleteError(result.error);
       } else {
         setItems((current) => current.filter((item) => item.publicId !== publicId));
+        photoPositions?.remove(publicId);
       }
     } catch {
       setDeleteError("Connexion interrompue : le fichier n'a pas été supprimé. Réessayez.");

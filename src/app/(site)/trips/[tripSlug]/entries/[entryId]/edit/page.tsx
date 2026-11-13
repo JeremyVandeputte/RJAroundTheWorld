@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DeleteEntryForm } from "@/components/entry/delete-entry-form";
 import { EntryEditor } from "@/components/entry/entry-editor";
+import { PhotoPositionsProvider } from "@/components/entry/photo-positions";
 import { draftKey } from "@/lib/entry-draft";
 import { MediaManager } from "@/components/entry/media-manager";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +12,7 @@ import { getDb } from "@/server/db/client";
 import { loadEntry } from "@/server/page-data";
 import { canEditEntry } from "@/server/permissions";
 import { listTaggableUsers, listTripMapEntries } from "@/server/services/entries";
-import { getEntryCoverId, listEntryMedia } from "@/server/services/media";
+import { getEntryCoverId, listEntryMedia, listEntryPhotoPositions } from "@/server/services/media";
 import { listTags } from "@/server/services/tags";
 
 export const metadata: Metadata = { title: "Modifier l'entrée" };
@@ -42,43 +43,45 @@ export default async function EditEntryPage({ params }: { params: Promise<{ trip
         </Badge>
       </div>
 
-      <EntryEditor
-        tripId={trip.id}
-        people={options}
-        tripPoints={listTripMapEntries(getDb(), viewer, trip).map((item) => item.pointA)}
-        tags={listTags(getDb(), viewer)}
-        entry={{ id: entry.id, status: entry.status }}
-        draftKey={draftKey(viewer.id, trip.id, entry.id)}
-        defaults={{
-          date: entry.date,
-          title: entry.title,
-          body: entry.body,
-          peopleIds: people.map((person) => person.id),
-          tagIds: detail.tags.map((tag) => tag.id),
-          newTags: [],
-          pointA:
-            entry.pointALat !== null && entry.pointALng !== null
-              ? { lat: entry.pointALat, lng: entry.pointALng, name: entry.pointAName ?? "" }
-              : null,
-          pointB:
-            entry.pointBLat !== null && entry.pointBLng !== null
-              ? { lat: entry.pointBLat, lng: entry.pointBLng, name: entry.pointBName ?? "" }
-              : null,
-        }}
-      />
-
-      <section id="media" aria-labelledby="media-title" className="mt-10 scroll-mt-4 border-t border-line pt-6">
-        <h2 id="media-title" className="mb-4 text-lg font-semibold">
-          Photos et vidéos
-        </h2>
-        <MediaManager
-          entryId={entry.id}
-          initialItems={listEntryMedia(getDb(), viewer, trip, entry)}
-          coverPublicId={getEntryCoverId(getDb(), entry)}
-          maxPhotoBytes={env.maxPhotoBytes}
-          maxVideoBytes={env.maxVideoBytes}
+      <PhotoPositionsProvider initial={listEntryPhotoPositions(getDb(), viewer, trip, entry)}>
+        <EntryEditor
+          tripId={trip.id}
+          people={options}
+          tripPoints={listTripMapEntries(getDb(), viewer, trip).map((item) => item.pointA)}
+          tags={listTags(getDb(), viewer)}
+          entry={{ id: entry.id, status: entry.status }}
+          draftKey={draftKey(viewer.id, trip.id, entry.id)}
+          defaults={{
+            date: entry.date,
+            title: entry.title,
+            body: entry.body,
+            peopleIds: people.map((person) => person.id),
+            tagIds: detail.tags.map((tag) => tag.id),
+            newTags: [],
+            pointA:
+              entry.pointALat !== null && entry.pointALng !== null
+                ? { lat: entry.pointALat, lng: entry.pointALng, name: entry.pointAName ?? "" }
+                : null,
+            pointB:
+              entry.pointBLat !== null && entry.pointBLng !== null
+                ? { lat: entry.pointBLat, lng: entry.pointBLng, name: entry.pointBName ?? "" }
+                : null,
+          }}
         />
-      </section>
+
+        <section id="media" aria-labelledby="media-title" className="mt-10 scroll-mt-4 border-t border-line pt-6">
+          <h2 id="media-title" className="mb-4 text-lg font-semibold">
+            Photos et vidéos
+          </h2>
+          <MediaManager
+            entryId={entry.id}
+            initialItems={listEntryMedia(getDb(), viewer, trip, entry)}
+            coverPublicId={getEntryCoverId(getDb(), entry)}
+            maxPhotoBytes={env.maxPhotoBytes}
+            maxVideoBytes={env.maxVideoBytes}
+          />
+        </section>
+      </PhotoPositionsProvider>
 
       <div className="mt-10 border-t border-line pt-4">
         <DeleteEntryForm entryId={entry.id} />

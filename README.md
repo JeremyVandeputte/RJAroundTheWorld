@@ -168,6 +168,7 @@ Elles s'ajoutent depuis « Modifier l'entrée », section « Photos et vidéos �
 La carte utilise Leaflet (inclus dans le site, aucun CDN) et les fonds de carte d'OpenStreetMap : pas de clé API, pas de service payant.
 
 - **Choisir un lieu** : dans le formulaire d'une entrée, un appui sur la carte place le lieu. « Ajouter une arrivée (point B) » place un second point pour un trajet à sens unique ; A et B sont reliés par un trait droit (aucun calcul d'itinéraire). Un marqueur se déplace en le faisant glisser ou en touchant ailleurs. Chaque point peut recevoir un nom.
+- **Lieu tiré des photos** : quand des photos de l'entrée contiennent une position GPS, elles apparaissent en vignettes au-dessus de la carte (« Position des photos »), de la plus ancienne à la plus récente. Toucher une vignette place le point en cours (le lieu, ou le point B s'il est sélectionné) là où la photo a été prise. « Trajet de la première à la dernière photo » place A et B d'un coup. Les photos envoyées apparaissent aussitôt, sans recharger la page. Ces positions ne sont montrées qu'à qui peut modifier l'entrée ; les fichiers des photos restent servis sans aucune donnée GPS.
 - **Centrer sur ma position** : n'apparaît qu'en `https` (ou sur `localhost`), car les navigateurs n'autorisent la localisation que sur une connexion sécurisée. Centre la carte, sans placer de point.
 - **Carte du voyage** : bouton « Carte » sur la page du voyage. Un marqueur par lieu des entrées publiées ; un appui sur un marqueur ouvre l'entrée.
 - **Page d'une entrée** : une petite carte montre son lieu ou son trajet.
@@ -389,11 +390,11 @@ Réalisé :
 
 - **Brouillon local** d'une entrée en cours de rédaction (voir « Connexion instable »).
 - **Application installable (PWA)**, avec une page « Pas de connexion » (voir « Installer l'application »).
+- **Lieu tiré des coordonnées GPS des photos** (voir « Carte »).
 
 Pistes restantes :
 
 - **Transcodage des vidéos** et compression plus poussée, par exemple pour lire les vidéos HEVC partout.
-- **Lieu tiré des coordonnées GPS des photos** : elles sont déjà enregistrées en base à l'envoi.
 - **Export d'un voyage** en PDF ou en archive.
 - **Carte globale**, tous voyages confondus.
 - **Statistiques et recherche** dans le journal.

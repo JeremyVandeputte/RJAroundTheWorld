@@ -2,13 +2,22 @@
 // only the chunk in flight is lost and it is retried automatically; after
 // several failures the upload stops and can be resumed where it stopped.
 
+import type { PhotoPosition } from "./photo-position";
+
 export const UPLOAD_CHUNK_BYTES = 4 * 1024 * 1024;
 
 const RETRY_DELAYS_MS = [1000, 2000, 4000, 8000];
 const CHUNK_TIMEOUT_MS = 180_000;
 
 export type UploadKind = "photo" | "video";
-export type UploadedMedia = { publicId: string; kind: UploadKind; width: number | null; height: number | null };
+export type UploadedMedia = {
+  publicId: string;
+  kind: UploadKind;
+  width: number | null;
+  height: number | null;
+  /** GPS position of a photo just sent, when it has one. */
+  position?: PhotoPosition | null;
+};
 
 export class UploadError extends Error {
   constructor(

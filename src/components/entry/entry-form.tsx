@@ -10,6 +10,7 @@ import { TextareaField } from "@/components/ui/textarea-field";
 import { usePersistentForm } from "@/components/ui/use-persistent-form";
 import { clearDraft, readFormValues, sameValues, saveDraft, type EntryFormValues } from "@/lib/entry-draft";
 import { saveEntryAction } from "@/server/actions/entries";
+import { usePhotoPositions } from "./photo-positions";
 
 /** How often what is typed is copied to the device. */
 const AUTOSAVE_MS = 2000;
@@ -38,6 +39,8 @@ function today(): string {
 
 export function EntryForm({ tripId, entry, defaults, draftKey, people, tripPoints, tags }: EntryFormProps) {
   const form = useRef<HTMLFormElement>(null);
+  // Positions of the entry's photos (edit page only).
+  const photoPositions = usePhotoPositions()?.positions;
   const dateInput = useRef<HTMLInputElement>(null);
   // Once saved, the local copy is useless: remove it and stop copying.
   const saved = useRef(false);
@@ -132,7 +135,12 @@ export function EntryForm({ tripId, entry, defaults, draftKey, people, tripPoint
 
       <TagPicker tags={tags} selectedIds={defaults.tagIds} initialNewTags={defaults.newTags} />
 
-      <LocationPicker initialA={defaults.pointA} initialB={defaults.pointB} contextPoints={tripPoints} />
+      <LocationPicker
+        initialA={defaults.pointA}
+        initialB={defaults.pointB}
+        contextPoints={tripPoints}
+        photoPositions={photoPositions}
+      />
 
       {!entry ? (
         <fieldset className="rounded-md border border-line p-3">

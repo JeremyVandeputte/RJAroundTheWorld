@@ -1,5 +1,6 @@
 import { and, asc, count, desc, eq, inArray, isNotNull, max, ne, sum } from "drizzle-orm";
 import type { Env } from "@/lib/env";
+import { compareCaptureTime, type PhotoPosition } from "@/lib/photo-position";
 import type { Db } from "@/server/db/client";
 import { entries, media, trips, type MediaKind } from "@/server/db/schema";
 import { canEditEntry, canEditTrip, canViewEntry, canViewTrip, type Actor } from "@/server/permissions";
@@ -42,6 +43,27 @@ export function listEntryMedia(db: Db, actor: Actor, trip: Trip, entry: Entry): 
     .orderBy(asc(media.position), asc(media.id))
     .all()
     .map(toItem);
+}
+
+/**
+ * GPS positions of the entry's photos, oldest first, to place the entry from
+ * them. Only for people who can edit the entry.
+ */
+export function listEntryPhotoPositions(db: Db, actor: Actor, trip: Trip, entry: Entry): PhotoPosition[] {
+  if (entry.tripId !== trip.id || !canEditEntry(actor, trip, entry)) return [];
+  const rows = db
+    .select()
+    .from(media)
+    .where(and(eq(media.entryId, entry.id), eq(media.kind, "photo"), isNotNull(media.exifLat), isNotNull(media.exifLng)))
+    .orderBy(asc(media.position), asc(media.id))
+    .all();
+  return rows.flatMap((row) => photoPosition(row) ?? []).sort(compareCaptureTime);
+}
+
+/** Position of a photo row, if it has one. */
+export function photoPosition(row: Pick<MediaRow, "publicId" | "exifLat" | "exifLng" | "exifTakenAt">): PhotoPosition | null {
+  if (row.exifLat === null || row.exifLng === null) return null;
+  return { publicId: row.publicId, lat: row.exifLat, lng: row.exifLng, takenAt: row.exifTakenAt };
 }
 
 /**
