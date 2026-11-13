@@ -6,7 +6,7 @@ import { messages } from "@/lib/messages";
 import { getEnv } from "@/lib/env";
 import { getCurrentUser } from "@/server/auth/current-user";
 import { getDb } from "@/server/db/client";
-import { removeEntryDirs } from "@/server/media/storage";
+import { removeEntryDirs, removeTripDir } from "@/server/media/storage";
 import { createTrip, deleteTrip, updateTrip, type TripInput } from "@/server/services/trips";
 import { formBoolean, formId, formString, type FormState } from "./form-state";
 
@@ -32,7 +32,8 @@ export async function saveTripAction(_previous: FormState, formData: FormData): 
   if (!result.ok) return { error: messages.trip[result.reason] };
 
   revalidatePath("/", "layout");
-  redirect(`/trips/${result.trip.slug}`);
+  // A new trip goes straight to its thumbnail, needed before it can be made visible.
+  redirect(tripId === null ? `/trips/${result.trip.slug}/edit#cover` : `/trips/${result.trip.slug}`);
 }
 
 export async function deleteTripAction(_previous: FormState, formData: FormData): Promise<FormState> {
@@ -41,6 +42,7 @@ export async function deleteTripAction(_previous: FormState, formData: FormData)
   const result = deleteTrip(getDb(), await getCurrentUser(), tripId);
   if (!result.ok) return { error: messages.trip[result.reason] };
   await removeEntryDirs(getEnv().mediaDir, result.entryIds);
+  await removeTripDir(getEnv().mediaDir, tripId);
 
   revalidatePath("/", "layout");
   redirect("/");

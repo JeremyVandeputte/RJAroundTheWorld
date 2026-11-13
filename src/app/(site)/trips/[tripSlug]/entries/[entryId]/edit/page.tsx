@@ -10,7 +10,7 @@ import { getDb } from "@/server/db/client";
 import { loadEntry } from "@/server/page-data";
 import { canEditEntry } from "@/server/permissions";
 import { listTaggableUsers, listTripMapEntries } from "@/server/services/entries";
-import { listEntryMedia } from "@/server/services/media";
+import { getEntryCoverId, listEntryMedia } from "@/server/services/media";
 import { listTags } from "@/server/services/tags";
 
 export const metadata: Metadata = { title: "Modifier l'entrée" };
@@ -66,6 +66,7 @@ export default async function EditEntryPage({ params }: { params: Promise<{ trip
         <MediaManager
           entryId={entry.id}
           initialItems={listEntryMedia(getDb(), viewer, trip, entry)}
+          coverPublicId={getEntryCoverId(getDb(), entry)}
           maxPhotoBytes={env.maxPhotoBytes}
           maxVideoBytes={env.maxVideoBytes}
         />

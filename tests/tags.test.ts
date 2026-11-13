@@ -13,7 +13,7 @@ import {
   renameTag,
 } from "@/server/services/tags";
 import { createTrip, type Trip } from "@/server/services/trips";
-import { entryInput, insertCast, tripInput } from "./helpers/fixtures";
+import { entryInput, insertCast, tripInput, makeTrip } from "./helpers/fixtures";
 import { createTestDb } from "./helpers/test-db";
 
 let db: Db;
@@ -34,9 +34,7 @@ const tagsOf = (entry: Entry) => getEntry(db, cast.superuser, trip, entry.id)?.t
 beforeEach(() => {
   db = createTestDb();
   cast = insertCast(db);
-  const created = createTrip(db, cast.superuser, tripInput());
-  if (!created.ok) throw new Error(created.reason);
-  trip = created.trip;
+  trip = makeTrip(db, cast.superuser);
 });
 
 describe("starting list", () => {

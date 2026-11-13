@@ -79,6 +79,15 @@ async function sendChunkWithRetry(
  * a failure: it resumes from the last chunk the server confirmed.
  */
 export function createUpload(entryId: number, file: File, kind: UploadKind) {
+  return createUploadTo(`/api/entries/${entryId}/media?kind=${kind}&size=${file.size}`, file);
+}
+
+/** Upload of a photo that becomes a trip's thumbnail (replacing the previous one). */
+export function createTripCoverUpload(tripId: number, file: File) {
+  return createUploadTo(`/api/trips/${tripId}/cover?size=${file.size}`, file);
+}
+
+function createUploadTo(startUrl: string, file: File) {
   let uploadId: string | null = null;
   let received = 0;
 
@@ -87,9 +96,7 @@ export function createUpload(entryId: number, file: File, kind: UploadKind) {
     for (;;) {
       const chunk = file.slice(received, received + UPLOAD_CHUNK_BYTES);
       const isFirst = uploadId === null;
-      const url = isFirst
-        ? `/api/entries/${entryId}/media?kind=${kind}&size=${file.size}`
-        : `/api/uploads/${uploadId}?offset=${received}`;
+      const url = isFirst ? startUrl : `/api/uploads/${uploadId}?offset=${received}`;
       const base = received;
       const { status, body } = await sendChunkWithRetry(isFirst ? "POST" : "PUT", url, chunk, (loaded) =>
         onProgress(Math.min(file.size, base + loaded)),

@@ -8,7 +8,7 @@ import { addComment, deleteComment, editComment, listCommentThreads, type Commen
 import { createEntry, deleteEntry, updateEntry, type Entry } from "@/server/services/entries";
 import { getEntryReactions, react } from "@/server/services/reactions";
 import { createTrip, updateTrip, type Trip } from "@/server/services/trips";
-import { entryInput, insertCast, insertUser, tripInput } from "./helpers/fixtures";
+import { entryInput, insertCast, insertUser, tripInput, makeTrip } from "./helpers/fixtures";
 import { createTestDb } from "./helpers/test-db";
 
 let db: Db;
@@ -22,9 +22,7 @@ let hiddenEntry: Entry;
 let draft: Entry;
 
 function mustTrip(actor: Actor, overrides = {}): Trip {
-  const result = createTrip(db, actor, tripInput(overrides));
-  if (!result.ok) throw new Error(result.reason);
-  return result.trip;
+  return makeTrip(db, actor, overrides);
 }
 function mustEntry(actor: Actor, inTrip: Trip, intent: "save" | "publish"): Entry {
   const result = createEntry(db, actor, inTrip.id, entryInput({ peopleIds: [cast.guest.id] }), intent);

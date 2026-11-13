@@ -36,6 +36,7 @@ export const messages = {
     invalid_description: "La description ne doit pas dépasser 500 caractères.",
     invalid_dates: "Indiquez une date de début et une date de fin valides.",
     end_before_start: "La date de fin ne peut pas précéder la date de début.",
+    cover_required: "Ajoutez d'abord une miniature au voyage (plus bas sur cette page) avant de le rendre visible.",
   },
   entry: {
     forbidden: "Vous n'avez pas le droit de modifier cette entrée.",
@@ -73,6 +74,11 @@ export const messages = {
     not_found: "Cet élément n'existe plus.",
     forbidden: "Vous n'avez pas la permission de réagir.",
     invalid_type: "Réaction inconnue.",
+  },
+  cover: {
+    not_found: "Cette photo n'existe plus.",
+    forbidden: "Vous n'avez pas le droit de changer cette miniature.",
+    not_a_photo: "Seule une photo peut servir de miniature.",
   },
   media: {
     not_found: "Cette entrée n'existe pas.",

@@ -123,7 +123,9 @@ Tout ce qui concerne les entrées, commentaires et réactions ne vaut que dans l
 ### Voyages
 
 - « Nouveau voyage » sur l'accueil (superuser et comptes ayant Gérer les voyages). Le compte qui crée un voyage en est l'auteur.
-- Un voyage est créé **non visible** par défaut. Tant qu'il l'est, lui et toutes ses entrées, même publiées, n'existent que pour son auteur et le superuser : pour tous les autres, ses adresses répondent 404, comme s'il n'existait pas. Cela vaut aussi pour quelqu'un qui y avait écrit avant qu'il ne soit masqué.
+- Un voyage est toujours créé **non visible** ; sa page de modification s'ouvre alors sur sa **miniature**.
+- **Miniature du voyage** : une photo envoyée pour le voyage, ou une des photos de ses entrées. Elle s'affiche sur l'accueil et en tête du journal. **Elle est obligatoire pour rendre le voyage visible** ; un voyage déjà visible qui perd sa miniature (photo supprimée) reste visible, avec un fond neutre.
+- Tant qu'un voyage est non visible, lui et ses entrées, même publiées, n'existent que pour son auteur et le superuser : pour tous les autres, ses adresses répondent 404, comme s'il n'existait pas. Cela vaut aussi pour quelqu'un qui y avait écrit avant qu'il ne soit masqué.
 - Cocher « Voyage visible » le révèle d'un coup avec toutes ses entrées publiées.
 - Seuls l'auteur du voyage (s'il a toujours Gérer les voyages) et le superuser peuvent le modifier, changer sa visibilité ou le supprimer. La suppression emporte toutes ses entrées, y compris celles écrites par d'autres, avec leurs photos, commentaires et réactions.
 - Si le compte de l'auteur est supprimé, le voyage reste et seul le superuser peut le gérer.
@@ -157,7 +159,8 @@ Elles s'ajoutent depuis « Modifier l'entrée », section « Photos et vidéos �
 - **Vie privée** : les fichiers enregistrés ne contiennent plus aucune métadonnée (position GPS, modèle d'appareil). La position et la date de prise de vue sont seulement notées en base, pour la Phase 2.
 - **Vidéos** : MP4, MOV ou WebM, 300 Mo maximum par défaut, enregistrées telles quelles et lues par le lecteur du navigateur.
 - **Quota** : 30 Go au total par défaut ; un envoi qui le dépasserait est refusé avant d'être reçu. 100 fichiers au maximum par entrée.
-- **Affichage** : miniatures chargées au fil du défilement ; un appui ouvre la photo en grand. La première photo d'une entrée sert de vignette dans la liste du voyage.
+- **Affichage** : miniatures chargées au fil du défilement ; un appui ouvre la photo en grand.
+- **Miniature d'une entrée** : la photo affichée dans la liste du voyage. Par défaut la première ; « Miniature » sous une autre photo la choisit à la place.
 - **Stockage** : sur le disque, dans `MEDIA_DIR`, un dossier par entrée ; la base ne garde que le chemin et les métadonnées. Supprimer une entrée ou un voyage supprime ses fichiers.
 
 ### Carte

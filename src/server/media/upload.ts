@@ -2,7 +2,14 @@ import type { Env } from "@/lib/env";
 import type { Db } from "@/server/db/client";
 import type { MediaKind } from "@/server/db/schema";
 import type { Actor } from "@/server/permissions";
-import { checkUploadAllowed, recordMedia, type MediaItem, type UploadRefusal } from "@/server/services/media";
+import {
+  checkTripCoverUploadAllowed,
+  checkUploadAllowed,
+  recordMedia,
+  recordTripCover,
+  type MediaItem,
+  type UploadRefusal,
+} from "@/server/services/media";
 import { processPhoto, storeVideo, UnsupportedMediaError } from "./processing";
 import {
   appendToUpload,
@@ -13,6 +20,8 @@ import {
   readUploadSession,
   relativeMediaPath,
   removeFiles,
+  tripDir,
+  tripFolder,
   removeUploadSession,
   uploadPartPath,
   type UploadSession,
@@ -80,7 +89,29 @@ export async function startUpload(
   if (chunk.byteLength > upload.size) return { ok: false, reason: "too_large" };
 
   await cleanupStaleUploads(config.mediaDir);
-  const session = await createUploadSession(config.mediaDir, { entryId, userId: actor.id, ...upload });
+  const session = await createUploadSession(config.mediaDir, { entryId, tripId: null, userId: actor.id, ...upload });
+  return receiveChunk(db, config, actor, session, chunk);
+}
+
+/** Starts the upload of a photo that becomes a trip's thumbnail. */
+export async function startTripCoverUpload(
+  db: Db,
+  config: UploadConfig,
+  actor: Actor,
+  tripId: number,
+  size: number,
+  chunk: Uint8Array,
+): Promise<UploadResult> {
+  if (!isValidSize(size) || chunk.byteLength === 0) return { ok: false, reason: "invalid_request" };
+  if (chunk.byteLength > MAX_CHUNK_BYTES) return { ok: false, reason: "chunk_too_large" };
+
+  const allowed = checkTripCoverUploadAllowed(db, actor, tripId, size, config);
+  if (!allowed.ok) return allowed;
+  if (!actor) return { ok: false, reason: "forbidden" };
+  if (chunk.byteLength > size) return { ok: false, reason: "too_large" };
+
+  await cleanupStaleUploads(config.mediaDir);
+  const session = await createUploadSession(config.mediaDir, { entryId: null, tripId, userId: actor.id, kind: "photo", size });
   return receiveChunk(db, config, actor, session, chunk);
 }
 
@@ -118,7 +149,14 @@ async function receiveChunk(
   };
 
   // Permissions may have changed since the upload started.
-  const allowed = checkUploadAllowed(db, actor, session.entryId, session, config);
+  const tripId = session.tripId ?? null;
+  const entryId = session.entryId;
+  const allowed =
+    tripId !== null
+      ? checkTripCoverUploadAllowed(db, actor, tripId, session.size, config)
+      : entryId !== null
+        ? checkUploadAllowed(db, actor, entryId, session, config)
+        : ({ ok: false, reason: "not_found" } as const);
   if (!allowed.ok) return abandon(allowed.reason);
   if (session.received + chunk.byteLength > session.size) return abandon("too_large");
 
@@ -127,16 +165,35 @@ async function receiveChunk(
 
   // Last chunk: turn the temporary file into a stored media.
   const publicId = newPublicId();
-  const destDir = entryDir(config.mediaDir, session.entryId);
+  const folder = tripId !== null ? tripFolder(tripId) : String(entryId);
+  const destDir = tripId !== null ? tripDir(config.mediaDir, tripId) : entryDir(config.mediaDir, entryId!);
   const source = uploadPartPath(config.mediaDir, session.uploadId);
   try {
-    if (session.kind === "photo") {
+    if (tripId !== null) {
       const photo = await processPhoto(source, destDir, publicId);
-      const media = recordMedia(db, session.entryId, actor.id, {
+      const { media, replacedFiles } = recordTripCover(db, tripId, actor.id, {
         publicId,
         kind: "photo",
-        filePath: relativeMediaPath(session.entryId, photo.fileName),
-        thumbPath: relativeMediaPath(session.entryId, photo.thumbName),
+        filePath: relativeMediaPath(folder, photo.fileName),
+        thumbPath: relativeMediaPath(folder, photo.thumbName),
+        mimeType: "image/jpeg",
+        sizeBytes: photo.sizeBytes,
+        width: photo.width,
+        height: photo.height,
+        exifLat: photo.exif.lat,
+        exifLng: photo.exif.lng,
+        exifTakenAt: photo.exif.takenAt,
+      });
+      await removeFiles(config.mediaDir, replacedFiles);
+      return { ok: true, status: "complete", media };
+    }
+    if (session.kind === "photo") {
+      const photo = await processPhoto(source, destDir, publicId);
+      const media = recordMedia(db, entryId!, actor.id, {
+        publicId,
+        kind: "photo",
+        filePath: relativeMediaPath(folder, photo.fileName),
+        thumbPath: relativeMediaPath(folder, photo.thumbName),
         mimeType: "image/jpeg",
         sizeBytes: photo.sizeBytes,
         width: photo.width,
@@ -148,10 +205,10 @@ async function receiveChunk(
       return { ok: true, status: "complete", media };
     }
     const video = await storeVideo(source, destDir, publicId);
-    const media = recordMedia(db, session.entryId, actor.id, {
+    const media = recordMedia(db, entryId!, actor.id, {
       publicId,
       kind: "video",
-      filePath: relativeMediaPath(session.entryId, video.fileName),
+      filePath: relativeMediaPath(folder, video.fileName),
       thumbPath: null,
       mimeType: video.mimeType,
       sizeBytes: video.sizeBytes,
@@ -166,10 +223,10 @@ async function receiveChunk(
     if (error instanceof UnsupportedMediaError) return { ok: false, reason: error.reason };
     // The file could not be recorded: leave nothing behind.
     await removeFiles(config.mediaDir, [
-      relativeMediaPath(session.entryId, `${publicId}.jpg`),
-      relativeMediaPath(session.entryId, `${publicId}_thumb.jpg`),
-      relativeMediaPath(session.entryId, `${publicId}.mp4`),
-      relativeMediaPath(session.entryId, `${publicId}.webm`),
+      relativeMediaPath(folder, `${publicId}.jpg`),
+      relativeMediaPath(folder, `${publicId}_thumb.jpg`),
+      relativeMediaPath(folder, `${publicId}.mp4`),
+      relativeMediaPath(folder, `${publicId}.webm`),
     ]);
     throw error;
   } finally {

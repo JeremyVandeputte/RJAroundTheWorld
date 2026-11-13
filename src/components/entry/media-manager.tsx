@@ -3,11 +3,13 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { mediaUrl, thumbnailUrl } from "@/lib/media-url";
 import { createUpload, detectUploadKind, UploadError, type UploadedMedia, type UploadKind } from "@/lib/upload-client";
-import { deleteMediaAction } from "@/server/actions/media";
+import { chooseEntryCoverAction, deleteMediaAction } from "@/server/actions/media";
 
 type MediaManagerProps = {
   entryId: number;
   initialItems: UploadedMedia[];
+  /** Photo chosen as the entry's thumbnail; null means its first photo. */
+  coverPublicId: string | null;
   maxPhotoBytes: number;
   maxVideoBytes: number;
 };
@@ -31,11 +33,12 @@ function formatSize(bytes: number): string {
 }
 
 /** Adds, lists and removes the photos and videos of an entry. Files are sent one after the other. */
-export function MediaManager({ entryId, initialItems, maxPhotoBytes, maxVideoBytes }: MediaManagerProps) {
+export function MediaManager({ entryId, initialItems, coverPublicId, maxPhotoBytes, maxVideoBytes }: MediaManagerProps) {
   const [items, setItems] = useState(initialItems);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [chosenCover, setChosenCover] = useState<string | null>(coverPublicId);
 
   // The queue runs outside React renders: keep the latest tasks in a ref.
   const tasksRef = useRef<Task[]>([]);
@@ -132,6 +135,21 @@ export function MediaManager({ entryId, initialItems, maxPhotoBytes, maxVideoByt
     setConfirmingDelete(null);
   }
 
+  async function makeCover(publicId: string) {
+    setDeleteError(null);
+    try {
+      const result = await chooseEntryCoverAction(publicId);
+      if (result.error) setDeleteError(result.error);
+      else setChosenCover(publicId);
+    } catch {
+      setDeleteError("Connexion interrompue : la miniature n'a pas été changée. Réessayez.");
+    }
+  }
+
+  // The thumbnail is the chosen photo, or else the first photo.
+  const photos = items.filter((item) => item.kind === "photo");
+  const coverId = photos.some((item) => item.publicId === chosenCover) ? chosenCover : (photos[0]?.publicId ?? null);
+
   const visibleTasks = tasks.filter((task) => task.status !== "done");
 
   return (
@@ -139,15 +157,25 @@ export function MediaManager({ entryId, initialItems, maxPhotoBytes, maxVideoByt
       {items.length > 0 ? (
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {items.map((item) => (
-            <li key={item.publicId} className="overflow-hidden rounded-md border border-line bg-white">
+            <li
+              key={item.publicId}
+              className={`overflow-hidden rounded-md border bg-white ${item.publicId === coverId ? "border-accent" : "border-line"}`}
+            >
               {item.kind === "photo" ? (
-                <img
-                  src={thumbnailUrl(item.publicId)}
-                  alt=""
-                  loading="lazy"
-                  decoding="async"
-                  className="aspect-square w-full object-cover"
-                />
+                <div className="relative">
+                  <img
+                    src={thumbnailUrl(item.publicId)}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    className="aspect-square w-full object-cover"
+                  />
+                  {item.publicId === coverId ? (
+                    <span className="absolute inset-x-0 bottom-0 bg-accent py-0.5 text-center text-xs font-medium text-white">
+                      Miniature
+                    </span>
+                  ) : null}
+                </div>
               ) : (
                 <video
                   src={`${mediaUrl(item.publicId)}#t=0.001`}
@@ -158,7 +186,13 @@ export function MediaManager({ entryId, initialItems, maxPhotoBytes, maxVideoByt
                 />
               )}
               <div className="flex items-center justify-between gap-2 px-2 py-1 text-sm">
-                <span className="text-muted">{item.kind === "photo" ? "Photo" : "Vidéo"}</span>
+                {item.kind === "photo" && item.publicId !== coverId ? (
+                  <button type="button" onClick={() => makeCover(item.publicId)} className="min-h-11 text-left text-accent">
+                    Miniature
+                  </button>
+                ) : (
+                  <span className="text-muted">{item.kind === "photo" ? "Photo" : "Vidéo"}</span>
+                )}
                 {confirmingDelete === item.publicId ? (
                   <span className="flex gap-2">
                     <button type="button" onClick={() => remove(item.publicId)} className="min-h-11 font-medium text-red-800">

@@ -6,13 +6,13 @@ import { TripFiltersForm } from "@/components/trips/trip-filters";
 import { Badge } from "@/components/ui/badge";
 import { LinkButton } from "@/components/ui/link-button";
 import { formatDate, formatDateRange } from "@/lib/dates";
-import { thumbnailUrl } from "@/lib/media-url";
+import { mediaUrl, thumbnailUrl } from "@/lib/media-url";
 import { filtersToQuery, hasActiveFilters, parseTripFilters } from "@/lib/trip-filters";
 import { getDb } from "@/server/db/client";
 import { loadTrip } from "@/server/page-data";
 import { canCreateEntry, canEditTrip } from "@/server/permissions";
 import { listEntries, listTripFilterOptions } from "@/server/services/entries";
-import { listCoverPhotos } from "@/server/services/media";
+import { listCoverPhotos, listTripCovers } from "@/server/services/media";
 
 type TripPageProps = {
   params: Promise<{ tripSlug: string }>;
@@ -31,6 +31,7 @@ export default async function TripPage({ params, searchParams }: TripPageProps) 
   const options = listTripFilterOptions(getDb(), viewer, trip);
   const entries = listEntries(getDb(), viewer, trip, filters);
   const isFiltered = hasActiveFilters(filters);
+  const cover = listTripCovers(getDb(), [trip]).get(trip.id) ?? null;
   // Covers are looked up only for the entries this viewer is allowed to see.
   const covers = listCoverPhotos(
     getDb(),
@@ -43,6 +44,14 @@ export default async function TripPage({ params, searchParams }: TripPageProps) 
         <Link href="/" className="text-sm text-accent underline-offset-4 hover:underline">
           ← Voyages
         </Link>
+        {cover ? (
+          <img
+            src={mediaUrl(cover.publicId)}
+            alt=""
+            decoding="async"
+            className="mt-3 aspect-[5/2] w-full rounded-md object-cover"
+          />
+        ) : null}
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <h1 className="text-2xl font-semibold tracking-tight">{trip.title}</h1>
           {!trip.isVisible ? <Badge tone="warning">Non visible</Badge> : null}

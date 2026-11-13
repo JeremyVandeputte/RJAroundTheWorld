@@ -16,7 +16,7 @@ import {
 } from "@/server/services/notifications";
 import { react } from "@/server/services/reactions";
 import { createTrip, deleteTrip, updateTrip, type Trip } from "@/server/services/trips";
-import { entryInput, insertCast, insertUser, tripInput } from "./helpers/fixtures";
+import { entryInput, insertCast, insertUser, tripInput, makeTrip } from "./helpers/fixtures";
 import { createTestDb } from "./helpers/test-db";
 
 let db: Db;
@@ -26,9 +26,7 @@ let paulette: SessionUser; // another guest, identified in nothing
 let trip: Trip;
 
 function mustTrip(actor: Actor, overrides = {}): Trip {
-  const result = createTrip(db, actor, tripInput(overrides));
-  if (!result.ok) throw new Error(result.reason);
-  return result.trip;
+  return makeTrip(db, actor, overrides);
 }
 /** Entry by Romane (publisher), identifying Marie (guest) unless told otherwise. */
 function mustEntry(intent: "save" | "publish", overrides: Partial<EntryInput> = {}, actor: Actor = cast.publisher, inTrip: Trip = trip): Entry {

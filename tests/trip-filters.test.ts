@@ -11,7 +11,7 @@ import {
 } from "@/server/services/entries";
 import { listTags } from "@/server/services/tags";
 import { createTrip, type Trip } from "@/server/services/trips";
-import { entryInput, insertCast, tripInput } from "./helpers/fixtures";
+import { entryInput, insertCast, tripInput, makeTrip } from "./helpers/fixtures";
 import { createTestDb } from "./helpers/test-db";
 
 describe("reading filters from the address", () => {
@@ -72,9 +72,7 @@ describe("filtering a trip", () => {
   beforeEach(() => {
     db = createTestDb();
     cast = insertCast(db);
-    const created = createTrip(db, cast.superuser, tripInput());
-    if (!created.ok) throw new Error(created.reason);
-    trip = created.trip;
+    trip = makeTrip(db, cast.superuser);
     add("Salines", "2026-11-11", ["plage", "baignade"]);
     add("Pelée", "2026-11-14", ["randonnee", "paysage"]);
     add("Marché", "2026-11-14", ["nourriture", "ville"]);

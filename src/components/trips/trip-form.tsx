@@ -37,12 +37,18 @@ export function TripForm({ trip }: TripFormProps) {
         <TextField label="Date de début" name="startDate" type="date" defaultValue={trip?.startDate} required />
         <TextField label="Date de fin" name="endDate" type="date" defaultValue={trip?.endDate} required />
       </div>
-      <CheckboxField
-        label="Voyage visible"
-        name="isVisible"
-        defaultChecked={trip?.isVisible ?? false}
-        hint="Décoché : seuls la personne qui a créé le voyage et l'administrateur le voient. Coché : toutes ses entrées publiées deviennent visibles d'un coup."
-      />
+      {trip ? (
+        <CheckboxField
+          label="Voyage visible"
+          name="isVisible"
+          defaultChecked={trip?.isVisible ?? false}
+          hint="Décoché : seuls la personne qui a créé le voyage et l'administrateur le voient. Coché : toutes ses entrées publiées deviennent visibles d'un coup."
+        />
+      ) : (
+        <p className="rounded-md border border-line bg-white px-3 py-2 text-sm text-muted">
+          Le voyage est créé non visible. Vous pourrez ensuite lui ajouter une miniature, puis le rendre visible.
+        </p>
+      )}
       <FormMessage state={state} />
       <SubmitButton pending={pending} pendingLabel="Enregistrement…">
         {trip ? "Enregistrer le voyage" : "Créer le voyage"}

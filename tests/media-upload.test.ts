@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { eq } from "drizzle-orm";
+import { eq, isNotNull } from "drizzle-orm";
 import sharp from "sharp";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { SessionUser } from "@/server/auth/sessions";
@@ -19,7 +19,7 @@ import {
   MAX_MEDIA_PER_ENTRY,
 } from "@/server/services/media";
 import { createTrip, deleteTrip, updateTrip, type Trip } from "@/server/services/trips";
-import { entryInput, insertCast, insertUser, tripInput } from "./helpers/fixtures";
+import { entryInput, insertCast, insertUser, tripInput, makeTrip } from "./helpers/fixtures";
 import { createMediaConfig, listFiles, removeMediaDir, samplePhoto, sampleVideo } from "./helpers/media";
 import { createTestDb } from "./helpers/test-db";
 
@@ -32,9 +32,7 @@ let entry: Entry;
 let photoBytes: Uint8Array;
 
 function mustTrip(actor: Actor, overrides = {}): Trip {
-  const result = createTrip(db, actor, tripInput(overrides));
-  if (!result.ok) throw new Error(result.reason);
-  return result.trip;
+  return makeTrip(db, actor, overrides);
 }
 
 function mustEntry(actor: Actor, inTrip: Trip, intent: "save" | "publish"): Entry {
@@ -70,7 +68,7 @@ describe("uploading a photo", () => {
     expect(item).toMatchObject({ kind: "photo", width: 2000, height: 1333 });
     expect(item.publicId).toMatch(/^[A-Za-z0-9_-]{22}$/);
 
-    const row = db.select().from(media).get();
+    const row = db.select().from(media).where(isNotNull(media.entryId)).get();
     expect(row).toMatchObject({
       entryId: entry.id,
       uploaderId: cast.publisher.id,
@@ -91,7 +89,7 @@ describe("uploading a photo", () => {
     const bytes = new TextEncoder().encode("this is not a photo");
     const result = await startUpload(db, config, cast.publisher, entry.id, { kind: "photo", size: bytes.byteLength }, bytes);
     expect(result).toEqual({ ok: false, reason: "unsupported_image" });
-    expect(db.select().from(media).all()).toHaveLength(0);
+    expect(db.select().from(media).where(isNotNull(media.entryId)).all()).toHaveLength(0);
     expect(listFiles(config.mediaDir)).toEqual([]);
   });
 
@@ -124,12 +122,12 @@ describe("uploading in chunks", () => {
     const uploadId = await begin();
     const second = await continueUpload(db, config, cast.publisher, uploadId, 1000, chunks[1]!);
     expect(second).toEqual({ ok: true, status: "partial", uploadId, received: 2000 });
-    expect(db.select().from(media).all()).toHaveLength(0);
+    expect(db.select().from(media).where(isNotNull(media.entryId)).all()).toHaveLength(0);
 
     const last = await continueUpload(db, config, cast.publisher, uploadId, 2000, chunks[2]!);
     expect(last).toMatchObject({ ok: true, status: "complete", media: { kind: "video" } });
 
-    const row = db.select().from(media).get()!;
+    const row = db.select().from(media).where(isNotNull(media.entryId)).get()!;
     expect(row).toMatchObject({ kind: "video", mimeType: "video/mp4", sizeBytes: 2500, thumbPath: null });
     expect(new Uint8Array(fs.readFileSync(path.join(config.mediaDir, row.filePath)))).toEqual(video);
     expect(tmpFiles()).toEqual([]);
@@ -152,7 +150,7 @@ describe("uploading in chunks", () => {
     await continueUpload(db, config, cast.publisher, uploadId, 1000, chunks[1]!);
     const last = await continueUpload(db, config, cast.publisher, uploadId, 2000, chunks[2]!);
     expect(last.ok && last.status).toBe("complete");
-    const row = db.select().from(media).get()!;
+    const row = db.select().from(media).where(isNotNull(media.entryId)).get()!;
     expect(new Uint8Array(fs.readFileSync(path.join(config.mediaDir, row.filePath)))).toEqual(video);
   });
 
@@ -202,7 +200,7 @@ describe("uploading in chunks", () => {
     const demoted = { ...cast.publisher, canPublish: false };
     expect(await continueUpload(db, config, demoted, uploadId, 1000, chunks[1]!)).toEqual({ ok: false, reason: "forbidden" });
     expect(tmpFiles()).toEqual([]);
-    expect(db.select().from(media).all()).toHaveLength(0);
+    expect(db.select().from(media).where(isNotNull(media.entryId)).all()).toHaveLength(0);
   });
 
   it("refuses a video that is not a video once the last chunk has arrived", async () => {
@@ -258,7 +256,7 @@ describe("who can upload", () => {
   it("lets the author and the superuser add media to an entry", async () => {
     expect((await attempt(cast.publisher, entry)).ok).toBe(true);
     expect((await attempt(cast.superuser, entry)).ok).toBe(true);
-    expect(db.select().from(media).all().map((row) => row.uploaderId)).toEqual([cast.publisher.id, cast.superuser.id]);
+    expect(db.select().from(media).where(isNotNull(media.entryId)).all().map((row) => row.uploaderId)).toEqual([cast.publisher.id, cast.superuser.id]);
   });
 
   it("refuses everyone else", async () => {
@@ -409,7 +407,7 @@ describe("deleting media", () => {
       expect(deleteMedia(db, actor, item.publicId)).toEqual({ ok: false, reason: "forbidden" });
     }
     expect(deleteMedia(db, null, item.publicId)).toEqual({ ok: false, reason: "not_found" });
-    expect(db.select().from(media).all()).toHaveLength(1);
+    expect(db.select().from(media).where(isNotNull(media.entryId)).all()).toHaveLength(1);
     expect(deleteMedia(db, cast.superuser, item.publicId).ok).toBe(true);
     expect(deleteMedia(db, cast.superuser, item.publicId)).toEqual({ ok: false, reason: "not_found" });
   });
@@ -433,7 +431,7 @@ describe("deleting media", () => {
     expect(deleteEntry(db, cast.publisher, entry.id).ok).toBe(true);
     await removeEntryDirs(config.mediaDir, [entry.id]);
 
-    expect(db.select().from(media).all().map((row) => row.publicId)).toEqual([kept.publicId]);
+    expect(db.select().from(media).where(isNotNull(media.entryId)).all().map((row) => row.publicId)).toEqual([kept.publicId]);
     expect(storedFiles().every((file) => file.startsWith(`${other.id}/`))).toBe(true);
     expect(storedFiles()).toHaveLength(2);
   });
@@ -448,7 +446,7 @@ describe("deleting media", () => {
     expect(result.entryIds.sort()).toEqual([entry.id, second.id].sort());
     await removeEntryDirs(config.mediaDir, result.entryIds);
 
-    expect(db.select().from(media).all()).toHaveLength(0);
+    expect(db.select().from(media).where(isNotNull(media.entryId)).all()).toHaveLength(0);
     expect(storedFiles()).toEqual([]);
     expect(getMediaUsage(db)).toBe(0);
   });

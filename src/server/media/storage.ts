@@ -28,9 +28,18 @@ export function entryDir(mediaDir: string, entryId: number): string {
   return path.join(mediaDir, String(entryId));
 }
 
+/** Name of the folder holding a trip's own thumbnail photo. */
+export function tripFolder(tripId: number): string {
+  return `trip-${tripId}`;
+}
+
+export function tripDir(mediaDir: string, tripId: number): string {
+  return path.join(mediaDir, tripFolder(tripId));
+}
+
 /** Path stored in the database: relative to MEDIA_DIR, with forward slashes. */
-export function relativeMediaPath(entryId: number, fileName: string): string {
-  return `${entryId}/${fileName}`;
+export function relativeMediaPath(folder: number | string, fileName: string): string {
+  return `${folder}/${fileName}`;
 }
 
 /**
@@ -57,11 +66,19 @@ export async function removeEntryDirs(mediaDir: string, entryIds: number[]): Pro
   }
 }
 
+/** Removes the thumbnail files of a deleted trip. */
+export async function removeTripDir(mediaDir: string, tripId: number): Promise<void> {
+  await fs.rm(tripDir(mediaDir, tripId), { recursive: true, force: true });
+}
+
 // --- Uploads in progress --------------------------------------------------
 
 export type UploadSession = {
   uploadId: string;
-  entryId: number;
+  /** Target: an entry (photos and videos)... */
+  entryId: number | null;
+  /** ...or a trip (its thumbnail photo). */
+  tripId?: number | null;
   userId: number;
   kind: MediaKind;
   /** Total size announced by the client, in bytes. */
@@ -84,7 +101,7 @@ export function uploadPartPath(mediaDir: string, uploadId: string): string {
 
 export async function createUploadSession(
   mediaDir: string,
-  details: Pick<UploadSession, "entryId" | "userId" | "kind" | "size">,
+  details: Pick<UploadSession, "entryId" | "tripId" | "userId" | "kind" | "size">,
 ): Promise<UploadSession> {
   const uploadId = randomBytes(24).toString("base64url");
   await fs.mkdir(tmpDir(mediaDir), { recursive: true });

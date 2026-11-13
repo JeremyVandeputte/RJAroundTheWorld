@@ -95,6 +95,8 @@ export const trips = sqliteTable("trips", {
   startDate: text("start_date").notNull(),
   endDate: text("end_date").notNull(),
   isVisible: integer("is_visible", { mode: "boolean" }).notNull().default(false),
+  /** Photo shown for the trip: uploaded for it, or one of its entries' photos. Required to make it visible. */
+  coverMediaId: integer("cover_media_id").references((): AnySQLiteColumn => media.id, { onDelete: "set null" }),
   createdAt: createdAt(),
 });
 
@@ -114,6 +116,8 @@ export const entries = sqliteTable(
     /** Simplified markdown: bold and links only. */
     body: text("body").notNull().default(""),
     status: text("status", { enum: ENTRY_STATUSES }).notNull().default("draft"),
+    /** Photo used as the entry's thumbnail; null means its first photo. */
+    coverMediaId: integer("cover_media_id").references((): AnySQLiteColumn => media.id, { onDelete: "set null" }),
     publishedAt: integer("published_at", { mode: "timestamp_ms" }),
     // Point A: fixed place, or start of a one-way route.
     pointALat: real("point_a_lat"),
@@ -189,9 +193,10 @@ export const media = sqliteTable(
     id: id(),
     /** Random identifier used in URLs. */
     publicId: text("public_id").notNull().unique(),
-    entryId: integer("entry_id")
-      .notNull()
-      .references(() => entries.id, { onDelete: "cascade" }),
+    /** Entry the file belongs to; null for a photo uploaded as a trip's thumbnail. */
+    entryId: integer("entry_id").references(() => entries.id, { onDelete: "cascade" }),
+    /** Trip whose thumbnail this photo is, when it was uploaded for the trip itself. */
+    tripId: integer("trip_id").references((): AnySQLiteColumn => trips.id, { onDelete: "cascade" }),
     uploaderId: integer("uploader_id")
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
@@ -211,7 +216,12 @@ export const media = sqliteTable(
     exifTakenAt: text("exif_taken_at"),
     createdAt: createdAt(),
   },
-  (t) => [index("media_entry_idx").on(t.entryId, t.position)],
+  (t) => [
+    index("media_entry_idx").on(t.entryId, t.position),
+    index("media_trip_idx").on(t.tripId),
+    // A file belongs either to an entry or, as its thumbnail, to a trip.
+    check("media_single_owner", sql`(${t.entryId} is null) <> (${t.tripId} is null)`),
+  ],
 );
 
 export const comments = sqliteTable(

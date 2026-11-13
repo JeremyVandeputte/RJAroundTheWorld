@@ -16,7 +16,7 @@ import {
   type EntryInput,
 } from "@/server/services/entries";
 import { createTrip, updateTrip, type Trip } from "@/server/services/trips";
-import { entryInput, insertCast, insertUser, tripInput } from "./helpers/fixtures";
+import { entryInput, insertCast, insertUser, tripInput, makeTrip } from "./helpers/fixtures";
 import { createTestDb } from "./helpers/test-db";
 
 let db: Db;
@@ -32,9 +32,7 @@ function input(overrides: Partial<EntryInput> = {}): EntryInput {
 }
 
 function mustCreateTrip(overrides = {}, actor: Actor = cast.superuser): Trip {
-  const result = createTrip(db, actor, tripInput(overrides));
-  if (!result.ok) throw new Error(result.reason);
-  return result.trip;
+  return makeTrip(db, actor, overrides);
 }
 
 function mustCreateEntry(actor: Actor, trip: Trip, intent: "save" | "publish", overrides = {}): Entry {

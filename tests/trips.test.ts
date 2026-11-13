@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { SessionUser } from "@/server/auth/sessions";
 import type { Db } from "@/server/db/client";
-import { comments, entries, reactions, trips, users } from "@/server/db/schema";
+import { comments, entries, media, reactions, trips, users } from "@/server/db/schema";
 import type { Actor } from "@/server/permissions";
 import {
   countTripEntries,
@@ -15,7 +15,7 @@ import {
   updateTrip,
   type Trip,
 } from "@/server/services/trips";
-import { insertCast, insertUser, tripInput } from "./helpers/fixtures";
+import { attachCover, insertCast, insertUser, makeTrip, tripInput } from "./helpers/fixtures";
 import { createTestDb } from "./helpers/test-db";
 
 let db: Db;
@@ -23,10 +23,10 @@ let cast: ReturnType<typeof insertCast>;
 let otherManager: SessionUser;
 
 function mustCreate(actor: Actor, overrides = {}): Trip {
-  const result = createTrip(db, actor, tripInput(overrides));
-  if (!result.ok) throw new Error(result.reason);
-  return result.trip;
+  return makeTrip(db, actor, overrides);
 }
+
+const hiddenInput = (overrides = {}) => tripInput({ isVisible: false, ...overrides });
 
 const titles = (actor: Actor) => listTrips(db, actor).map((trip) => trip.title);
 const exists = (trip: Trip) => db.select().from(trips).where(eq(trips.id, trip.id)).get() !== undefined;
@@ -40,11 +40,11 @@ beforeEach(() => {
 describe("creating trips", () => {
   it("requires the Gérer les voyages permission", () => {
     for (const actor of [null, cast.guest, cast.publisher]) {
-      expect(createTrip(db, actor, tripInput())).toEqual({ ok: false, reason: "forbidden" });
+      expect(createTrip(db, actor, hiddenInput())).toEqual({ ok: false, reason: "forbidden" });
     }
     expect(db.select().from(trips).all()).toHaveLength(0);
-    expect(createTrip(db, cast.manager, tripInput()).ok).toBe(true);
-    expect(createTrip(db, cast.superuser, tripInput()).ok).toBe(true);
+    expect(createTrip(db, cast.manager, hiddenInput()).ok).toBe(true);
+    expect(createTrip(db, cast.superuser, hiddenInput()).ok).toBe(true);
   });
 
   it("records who created the trip", () => {
@@ -79,13 +79,38 @@ describe("creating trips", () => {
   });
 
   it("validates the input", () => {
-    const attempt = (overrides: object) => createTrip(db, cast.superuser, tripInput(overrides));
+    const attempt = (overrides: object) => createTrip(db, cast.superuser, hiddenInput(overrides));
     expect(attempt({ title: "  " })).toEqual({ ok: false, reason: "invalid_title" });
     expect(attempt({ title: "x".repeat(101) })).toEqual({ ok: false, reason: "invalid_title" });
     expect(attempt({ description: "x".repeat(501) })).toEqual({ ok: false, reason: "invalid_description" });
     expect(attempt({ startDate: "2026-02-30" })).toEqual({ ok: false, reason: "invalid_dates" });
     expect(attempt({ startDate: "2026-11-02", endDate: "2026-11-01" })).toEqual({ ok: false, reason: "end_before_start" });
     expect(attempt({ startDate: "2026-11-01", endDate: "2026-11-01" }).ok).toBe(true);
+  });
+});
+
+describe("thumbnail required to be visible", () => {
+  it("creates every trip hidden: asking for a visible trip at creation is refused", () => {
+    expect(createTrip(db, cast.superuser, tripInput({ isVisible: true }))).toEqual({ ok: false, reason: "cover_required" });
+    expect(db.select().from(trips).all()).toHaveLength(0);
+  });
+
+  it("refuses to make a trip visible until it has a thumbnail", () => {
+    const created = createTrip(db, cast.manager, hiddenInput());
+    if (!created.ok) throw new Error(created.reason);
+    const reveal = () => updateTrip(db, cast.manager, created.trip.id, tripInput({ isVisible: true }));
+    expect(reveal()).toEqual({ ok: false, reason: "cover_required" });
+    // Other changes are still possible while it stays hidden.
+    expect(updateTrip(db, cast.manager, created.trip.id, hiddenInput({ title: "Renommé" })).ok).toBe(true);
+
+    attachCover(db, created.trip.id, cast.manager.id);
+    expect(reveal()).toMatchObject({ ok: true, trip: { isVisible: true } });
+  });
+
+  it("keeps a visible trip editable even if it lost its thumbnail since", () => {
+    const trip = mustCreate(cast.superuser);
+    db.update(trips).set({ coverMediaId: null }).where(eq(trips.id, trip.id)).run();
+    expect(updateTrip(db, cast.superuser, trip.id, tripInput({ title: "Toujours visible" })).ok).toBe(true);
   });
 });
 
@@ -199,6 +224,8 @@ describe("trip visibility", () => {
   });
 
   it("hands a trip over to the superuser alone when its creator's account is deleted", () => {
+    // An account that sent files cannot be deleted: hand its thumbnails over first.
+    db.update(media).set({ uploaderId: cast.superuser.id }).where(eq(media.uploaderId, cast.manager.id)).run();
     db.delete(users).where(eq(users.id, cast.manager.id)).run();
     const orphan = getTripById(db, cast.superuser, hiddenByManager.id);
     expect(orphan).toMatchObject({ authorId: null, title: "Caché (Lucie)" });

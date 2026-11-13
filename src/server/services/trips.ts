@@ -19,7 +19,7 @@ export type TripInput = {
   isVisible: boolean;
 };
 
-export type TripIssue = "invalid_title" | "invalid_description" | "invalid_dates" | "end_before_start";
+export type TripIssue = "invalid_title" | "invalid_description" | "invalid_dates" | "end_before_start" | "cover_required";
 
 /** Slugs that would collide with fixed routes under /trips/. */
 const RESERVED_SLUGS = new Set(["new"]);
@@ -83,6 +83,8 @@ export function createTrip(db: Db, actor: Actor, input: TripInput): SaveTripResu
   if (!actor || !canCreateTrip(actor)) return { ok: false, reason: "forbidden" };
   const issue = validate(input);
   if (issue) return { ok: false, reason: issue };
+  // A trip needs a thumbnail to be visible: it is always created hidden first.
+  if (input.isVisible) return { ok: false, reason: "cover_required" };
 
   const trip = db.transaction((tx) => {
     const created = tx
@@ -122,6 +124,10 @@ export function updateTrip(db: Db, actor: Actor, tripId: number, input: TripInpu
   if (!found.ok) return found;
   const issue = validate(input);
   if (issue) return { ok: false, reason: issue };
+  // Making a trip visible requires a thumbnail (a visible trip keeps its state).
+  if (!found.trip.isVisible && input.isVisible && found.trip.coverMediaId === null) {
+    return { ok: false, reason: "cover_required" };
+  }
 
   const trip = db.transaction((tx) => {
     const updated = tx
