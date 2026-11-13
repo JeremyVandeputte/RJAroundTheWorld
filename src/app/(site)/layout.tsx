@@ -4,6 +4,10 @@ import { getCurrentUser } from "@/server/auth/current-user";
 import { getDb } from "@/server/db/client";
 import { countUnreadNotifications } from "@/server/services/notifications";
 
+// Do not add a loading.tsx (or Suspense around pages) in this segment: with
+// streaming, the "200 OK" status is sent before a page can call notFound() or
+// redirect(). Hidden trips would then answer 200 instead of a clean 404, and
+// redirections (login, forced password change) would happen in the browser.
 export default async function SiteLayout({ children }: { children: ReactNode }) {
   const user = await getCurrentUser();
   // No bell while a new password must be chosen: the rest of the site is closed.

@@ -12,6 +12,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  // Colour of the browser bar on phones, matching the header.
+  themeColor: "#ffffff",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

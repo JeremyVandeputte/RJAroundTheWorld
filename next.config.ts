@@ -12,6 +12,10 @@ export const securityHeaders = [
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
+  // Device features: only location, for "Centrer sur ma position" on the map.
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(self), payment=(), usb=()" },
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+  // The Content-Security-Policy changes on every request: it is set in src/proxy.ts.
 ];
 
 // Development only: other devices allowed to use the dev server, for instance

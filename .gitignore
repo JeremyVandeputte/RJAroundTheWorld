@@ -7,8 +7,9 @@ out/
 next-env.d.ts
 *.tsbuildinfo
 
-# local data: SQLite database and uploaded media
+# local data: SQLite database, uploaded media and backups
 data/
+backups/
 
 # environment (secrets)
 .env
