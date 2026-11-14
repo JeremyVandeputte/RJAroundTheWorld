@@ -7,6 +7,7 @@ import { SitePhotoAdmin } from "@/components/admin/site-photo-admin";
 import { TagAdmin } from "@/components/admin/tag-admin";
 import { APP_NAME } from "@/lib/app";
 import { CopyButton } from "@/components/ui/copy-button";
+import { LocalDateTime } from "@/components/ui/local-date-time";
 import { getEnv } from "@/lib/env";
 import { getViewer } from "@/server/auth/current-user";
 import { getDb } from "@/server/db/client";
@@ -48,6 +49,15 @@ export default async function AdminPage() {
                       <UserBadges user={user} />
                     </span>
                     <span className="mt-1 block text-sm text-muted">{permissionSummary(user)}</span>
+                    <span className="mt-0.5 block text-sm text-muted">
+                      {user.lastSeenAt ? (
+                        <>
+                          Dernière visite : <LocalDateTime iso={user.lastSeenAt.toISOString()} />
+                        </>
+                      ) : (
+                        "Jamais venu sur le site"
+                      )}
+                    </span>
                   </Link>
                 </li>
               ))}

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { PermissionsForm } from "@/components/admin/permissions-form";
 import { UserActionForm } from "@/components/admin/user-action-form";
 import { UserBadges } from "@/components/admin/user-badges";
+import { LocalDateTime } from "@/components/ui/local-date-time";
 import {
   deleteUserAction,
   forcePasswordChangeAction,
@@ -34,6 +35,15 @@ export default async function AdminUserPage({ params }: { params: Promise<{ user
         <div className="mt-2">
           <UserBadges user={user} />
         </div>
+        <p className="mt-2 text-sm text-muted">
+          {user.lastSeenAt ? (
+            <>
+              Dernière visite : <LocalDateTime iso={user.lastSeenAt.toISOString()} />
+            </>
+          ) : (
+            "Jamais venu sur le site"
+          )}
+        </p>
       </div>
 
       {user.role === "superuser" ? (

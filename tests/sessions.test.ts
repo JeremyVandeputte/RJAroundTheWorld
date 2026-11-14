@@ -66,6 +66,27 @@ describe("sessions", () => {
     expect(getSessionUser(db, token, env, daysLater(80))).toBeNull();
   });
 
+  it("records the last visit of the account, at most every five minutes", () => {
+    const lastSeen = () => db.select().from(users).where(eq(users.id, userId)).get()?.lastSeenAt?.getTime() ?? null;
+    expect(lastSeen()).toBeNull();
+    const { token } = createSession(db, userId, env, start);
+    expect(getSessionUser(db, token, env, start)?.lastSeenAt).toEqual(start);
+    expect(lastSeen()).toBe(start.getTime());
+
+    const minutes = (n: number) => new Date(start.getTime() + n * 60_000);
+    getSessionUser(db, token, env, minutes(3));
+    expect(lastSeen()).toBe(start.getTime());
+    getSessionUser(db, token, env, minutes(6));
+    expect(lastSeen()).toBe(minutes(6).getTime());
+  });
+
+  it("does not record a visit for an unknown token or an expired session", () => {
+    const { token } = createSession(db, userId, env, start);
+    getSessionUser(db, "unknown-token", env, start);
+    getSessionUser(db, token, env, daysLater(40));
+    expect(db.select().from(users).where(eq(users.id, userId)).get()?.lastSeenAt).toBeNull();
+  });
+
   it("stops working as soon as the account is deactivated", () => {
     const { token } = createSession(db, userId, env, start);
     db.update(users).set({ isActive: false }).where(eq(users.id, userId)).run();

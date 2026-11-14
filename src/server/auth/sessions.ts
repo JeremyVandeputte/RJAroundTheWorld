@@ -10,6 +10,8 @@ export type SessionConfig = Pick<Env, "sessionSecret" | "sessionDays">;
 export type SessionUser = Omit<typeof users.$inferSelect, "passwordHash">;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+/** The last visit of an account is recorded at most this often. */
+export const LAST_SEEN_PRECISION_MS = 5 * 60 * 1000;
 
 export function toSessionUser(user: typeof users.$inferSelect): SessionUser {
   const { passwordHash: _passwordHash, ...rest } = user;
@@ -33,7 +35,8 @@ export function createSession(db: Db, userId: number, config: SessionConfig, now
 /**
  * Returns the user owning a session token, or null when the session is
  * unknown, expired, or belongs to a deactivated account.
- * Active sessions are extended, so they expire after `sessionDays` of inactivity.
+ * Active sessions are extended, so they expire after `sessionDays` of inactivity,
+ * and the account's last visit is recorded.
  */
 export function getSessionUser(db: Db, token: string, config: SessionConfig, now = new Date()): SessionUser | null {
   const row = db
@@ -60,7 +63,14 @@ export function getSessionUser(db: Db, token: string, config: SessionConfig, now
       .run();
   }
 
-  return toSessionUser(row.user);
+  // Last visit, shown to the superuser in the administration.
+  let user = row.user;
+  if (!user.lastSeenAt || now.getTime() - user.lastSeenAt.getTime() >= LAST_SEEN_PRECISION_MS) {
+    db.update(users).set({ lastSeenAt: now }).where(eq(users.id, user.id)).run();
+    user = { ...user, lastSeenAt: now };
+  }
+
+  return toSessionUser(user);
 }
 
 export function deleteSession(db: Db, token: string, config: SessionConfig): void {

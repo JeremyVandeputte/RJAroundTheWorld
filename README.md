@@ -88,6 +88,7 @@ Le site ne répond qu'aux navigateurs qui ont ouvert le lien secret au moins une
 
 Pas d'inscription libre : seuls le script `create-superuser` et la page « Administration » créent des comptes. Pour le superuser, cette page permet de :
 
+- **voir la dernière visite** de chaque compte (date et heure, à 5 minutes près), dans la liste des comptes et sur la page d'un compte ;
 - **créer un compte** : identifiant, nom affiché et permissions. Un mot de passe temporaire est généré et affiché une seule fois ; la personne doit choisir le sien dès sa première connexion ;
 - **régler les permissions** de chaque compte : Publier et Gérer les voyages (désactivées par défaut : un nouveau compte peut seulement lire) ;
 - **réinitialiser un mot de passe oublié** : nouveau mot de passe temporaire affiché une seule fois, sessions du compte fermées, blocage de connexion levé ;

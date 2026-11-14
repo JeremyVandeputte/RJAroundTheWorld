@@ -44,6 +44,8 @@ export const users = sqliteTable("users", {
   mustChangePassword: integer("must_change_password", { mode: "boolean" }).notNull().default(false),
   isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
   createdAt: createdAt(),
+  /** Last time the account used the site (updated at most every few minutes). */
+  lastSeenAt: integer("last_seen_at", { mode: "timestamp_ms" }),
 });
 
 export const sessions = sqliteTable(
@@ -253,3 +255,18 @@ export const siteSettings = sqliteTable("site_settings", {
   value: text("value").notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
 });
+
+/** Who has opened which entry, and when for the first time. */
+export const entryReads = sqliteTable(
+  "entry_reads",
+  {
+    entryId: integer("entry_id")
+      .notNull()
+      .references(() => entries.id, { onDelete: "cascade" }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    readAt: integer("read_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.entryId, t.userId] }), index("entry_reads_user_idx").on(t.userId)],
+);
