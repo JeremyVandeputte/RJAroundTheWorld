@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { SearchForm } from "@/components/search/search-form";
-import { MapIcon } from "@/components/ui/icons";
+import { ChartIcon, MapIcon, PlusIcon } from "@/components/ui/icons";
 import { LinkButton } from "@/components/ui/link-button";
 import { formatDateRange } from "@/lib/dates";
 import { thumbnailUrl } from "@/lib/media-url";
@@ -18,23 +18,32 @@ export default async function HomePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">Voyages</h1>
-        {canCreateTrip(viewer) ? <LinkButton href="/trips/new">Nouveau voyage</LinkButton> : null}
-      </div>
+      {/* The list speaks for itself: the title is only for screen readers. */}
+      <h1 className="sr-only">Voyages</h1>
 
-      {trips.length > 0 ? (
-        <div className="space-y-3">
-          <SearchForm />
-          <div className="flex flex-wrap gap-3">
+      <div className="space-y-3">
+        {trips.length > 0 ? <SearchForm /> : null}
+        <div className="flex flex-wrap gap-3">
+          {trips.length > 0 ? (
             <LinkButton href="/map">
               <MapIcon className="mr-2 size-5 text-accent" />
               Carte de tous les voyages
             </LinkButton>
-            {canViewStats(viewer) ? <LinkButton href="/stats">Statistiques</LinkButton> : null}
-          </div>
+          ) : null}
+          {trips.length > 0 && canViewStats(viewer) ? (
+            <LinkButton href="/stats">
+              <ChartIcon className="mr-2 size-5 text-accent" />
+              Statistiques
+            </LinkButton>
+          ) : null}
+          {canCreateTrip(viewer) ? (
+            <LinkButton href="/trips/new">
+              <PlusIcon className="mr-2 size-5 text-accent" />
+              Nouveau voyage
+            </LinkButton>
+          ) : null}
         </div>
-      ) : null}
+      </div>
 
       {trips.length === 0 ? (
         <p className="text-muted">Aucun voyage pour le moment.</p>

@@ -1,3 +1,4 @@
+import { SearchIcon } from "@/components/ui/icons";
 import { MAX_QUERY_LENGTH } from "@/lib/search";
 
 /** Search box of the journal: a plain GET form, it works without JavaScript. */
@@ -20,8 +21,9 @@ export function SearchForm({ query = "", autoFocus = false }: { query?: string; 
       />
       <button
         type="submit"
-        className="inline-flex min-h-11 items-center rounded-md bg-accent px-4 font-medium text-white hover:bg-accent/90"
+        className="inline-flex min-h-11 items-center gap-2 rounded-md bg-accent px-4 font-medium text-white hover:bg-accent/90"
       >
+        <SearchIcon className="size-5" />
         Rechercher
       </button>
     </form>

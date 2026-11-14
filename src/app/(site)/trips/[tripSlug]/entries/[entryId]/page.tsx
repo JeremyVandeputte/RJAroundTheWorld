@@ -6,7 +6,7 @@ import { RichText } from "@/components/entry/rich-text";
 import { TripMap } from "@/components/map/trip-map";
 import { TagList } from "@/components/tags/tag-list";
 import { Badge } from "@/components/ui/badge";
-import { MapPinIcon, RouteIcon, UsersIcon } from "@/components/ui/icons";
+import { MapPinIcon, PencilIcon, RouteIcon, UsersIcon } from "@/components/ui/icons";
 import { LinkButton } from "@/components/ui/link-button";
 import { formatDate } from "@/lib/dates";
 import { getDb } from "@/server/db/client";
@@ -103,7 +103,10 @@ export default async function EntryPage({ params }: EntryPageProps) {
 
       {canEditEntry(viewer, trip, entry) ? (
         <div className="border-t border-line pt-4">
-          <LinkButton href={`/trips/${trip.slug}/entries/${entry.id}/edit`}>Modifier l&apos;entrée</LinkButton>
+          <LinkButton href={`/trips/${trip.slug}/entries/${entry.id}/edit`}>
+            <PencilIcon className="mr-2 size-5 text-accent" />
+            Modifier l&apos;entrée
+          </LinkButton>
         </div>
       ) : null}
     </article>
