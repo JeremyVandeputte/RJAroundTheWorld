@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { SearchForm } from "@/components/search/search-form";
+import { MapIcon } from "@/components/ui/icons";
 import { LinkButton } from "@/components/ui/link-button";
 import { formatDateRange } from "@/lib/dates";
 import { thumbnailUrl } from "@/lib/media-url";
@@ -26,7 +27,10 @@ export default async function HomePage() {
         <div className="space-y-3">
           <SearchForm />
           <div className="flex flex-wrap gap-3">
-            <LinkButton href="/map">Carte de tous les voyages</LinkButton>
+            <LinkButton href="/map">
+              <MapIcon className="mr-2 size-5 text-accent" />
+              Carte de tous les voyages
+            </LinkButton>
             {canViewStats(viewer) ? <LinkButton href="/stats">Statistiques</LinkButton> : null}
           </div>
         </div>

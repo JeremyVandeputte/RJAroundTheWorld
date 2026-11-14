@@ -6,6 +6,7 @@ import { RichText } from "@/components/entry/rich-text";
 import { TripMap } from "@/components/map/trip-map";
 import { TagList } from "@/components/tags/tag-list";
 import { Badge } from "@/components/ui/badge";
+import { MapPinIcon, RouteIcon, UsersIcon } from "@/components/ui/icons";
 import { LinkButton } from "@/components/ui/link-button";
 import { formatDate } from "@/lib/dates";
 import { getDb } from "@/server/db/client";
@@ -20,6 +21,9 @@ export async function generateMetadata({ params }: EntryPageProps): Promise<Meta
   const { detail } = await loadEntry(tripSlug, entryId);
   return detail ? { title: detail.entry.title } : {};
 }
+
+const fact = "mt-1.5 flex items-start gap-2 text-sm text-muted";
+const factIcon = "mt-px size-[18px] text-accent";
 
 function placeLabel(name: string | null, fallback: string): string {
   return name?.trim() || fallback;
@@ -48,14 +52,25 @@ export default async function EntryPage({ params }: EntryPageProps) {
         </div>
         <p className="mt-1 text-sm text-muted">par {author.displayName}</p>
         {hasPointA ? (
-          <p className="mt-1 text-sm text-muted">
-            {hasPointB
-              ? `Trajet : ${placeLabel(entry.pointAName, "point A")} → ${placeLabel(entry.pointBName, "point B")}`
-              : `Lieu : ${placeLabel(entry.pointAName, "indiqué sur la carte")}`}
+          <p className={fact}>
+            {hasPointB ? <RouteIcon className={factIcon} /> : <MapPinIcon className={factIcon} />}
+            <span>
+              {/* The icon says it on screen; screen readers get the word. */}
+              <span className="sr-only">{hasPointB ? "Trajet : " : "Lieu : "}</span>
+              {hasPointB
+                ? `${placeLabel(entry.pointAName, "point A")} → ${placeLabel(entry.pointBName, "point B")}`
+                : placeLabel(entry.pointAName, "indiqué sur la carte")}
+            </span>
           </p>
         ) : null}
         {people.length > 0 ? (
-          <p className="mt-1 text-sm text-muted">Avec {people.map((person) => person.displayName).join(", ")}</p>
+          <p className={fact}>
+            <UsersIcon className={factIcon} />
+            <span>
+              <span className="sr-only">Avec </span>
+              {people.map((person) => person.displayName).join(", ")}
+            </span>
+          </p>
         ) : null}
         {detail.tags.length > 0 ? (
           <div className="mt-3">
