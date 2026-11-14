@@ -46,6 +46,12 @@ export function SiteHeader({ user, unreadNotifications, photoUrl }: SiteHeaderPr
               Administration
             </Link>
           ) : null}
+          {/* Logged-in accounts only, like the page itself (same condition as the bell). */}
+          {unreadNotifications !== null ? (
+            <Link href="/about" className={navLink}>
+              À propos
+            </Link>
+          ) : null}
           {unreadNotifications !== null ? <NotificationBell unread={unreadNotifications} /> : null}
           {user ? (
             <Link href="/profile" className={navLink}>
