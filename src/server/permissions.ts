@@ -6,8 +6,7 @@ import type { EntryStatus } from "@/server/db/schema";
  * Every service calls these functions before reading or changing data;
  * the interface only uses them to hide what would be refused anyway.
  *
- * Four independent switches per user: Commenter, Réagir, Publier and
- * Gérer les voyages. "anonymous" is a visitor who only has the secret link:
+ * Two independent switches per user: Publier and Gérer les voyages. "anonymous" is a visitor who only has the secret link:
  * they can reach the login page and nothing else.
  *
  *                              anonymous   user              superuser
@@ -17,10 +16,6 @@ import type { EntryStatus } from "@/server/db/schema";
  *   see a draft                   no       its author only     yes
  *   create an entry               no       if Publier (*)      yes
  *   edit / delete an entry        no       own, if Publier (*) yes
- *   see comments, reactions       no       yes (*)             yes
- *   comment                       no       if Commenter (*)    yes
- *   edit / delete a comment       no       own, if Commenter   yes
- *   react                         no       if Réagir (*)       yes
  *   create a trip                 no       if Gérer les voyages yes
  *   edit / hide / delete a trip   no       own, if Gérer les voyages  yes
  *   manage users                  no       no                  yes
@@ -30,7 +25,7 @@ import type { EntryStatus } from "@/server/db/schema";
 
 export type PermissionUser = Pick<
   SessionUser,
-  "id" | "role" | "canPublish" | "canComment" | "canReact" | "canManageTrips" | "isActive" | "mustChangePassword"
+  "id" | "role" | "canPublish" | "canManageTrips" | "isActive" | "mustChangePassword"
 >;
 
 /** The person making a request: a user, or null for an anonymous visitor. */
@@ -38,7 +33,6 @@ export type Actor = PermissionUser | null;
 
 export type TripAccess = { isVisible: boolean; authorId: number | null };
 export type EntryAccess = { authorId: number; status: EntryStatus };
-export type CommentAccess = { authorId: number | null; deletedAt: Date | null };
 
 /**
  * A deactivated account, or one that must first choose a new password,
@@ -123,30 +117,9 @@ export function canEditEntry(actor: Actor, trip: TripAccess, entry: EntryAccess)
   return user.canPublish && entry.authorId === user.id && canViewTrip(actor, trip);
 }
 
-/** Comments and reactions (including counts) are only shown to logged-in users. */
-export function canViewSocial(actor: Actor, trip: TripAccess, entry: EntryAccess): boolean {
+/** Notifications about an entry: only for logged-in users, about published entries they can see. */
+export function canReadEntryNotification(actor: Actor, trip: TripAccess, entry: EntryAccess): boolean {
   return effectiveUser(actor) !== null && entry.status === "published" && canViewEntry(actor, trip, entry);
-}
-
-/** Posting a comment or a reply. */
-export function canComment(actor: Actor, trip: TripAccess, entry: EntryAccess): boolean {
-  const user = effectiveUser(actor);
-  return user !== null && (isSuperuser(user) || user.canComment) && canViewSocial(actor, trip, entry);
-}
-
-function canChangeComment(actor: Actor, trip: TripAccess, entry: EntryAccess, comment: CommentAccess): boolean {
-  const user = effectiveUser(actor);
-  if (user === null || comment.deletedAt !== null || !canViewSocial(actor, trip, entry)) return false;
-  return isSuperuser(user) || (user.canComment && comment.authorId === user.id);
-}
-
-export const canEditComment = canChangeComment;
-export const canDeleteComment = canChangeComment;
-
-/** Reacting to an entry or to one of its comments. */
-export function canReact(actor: Actor, trip: TripAccess, entry: EntryAccess): boolean {
-  const user = effectiveUser(actor);
-  return user !== null && (isSuperuser(user) || user.canReact) && canViewSocial(actor, trip, entry);
 }
 
 /**
@@ -155,7 +128,7 @@ export function canReact(actor: Actor, trip: TripAccess, entry: EntryAccess): bo
  * waiting once the password has been changed.
  */
 export function canBeNotifiedAbout(recipient: PermissionUser, trip: TripAccess, entry: EntryAccess): boolean {
-  return canViewSocial({ ...recipient, mustChangePassword: false }, trip, entry);
+  return canReadEntryNotification({ ...recipient, mustChangePassword: false }, trip, entry);
 }
 
 /** Same as `canBeNotifiedAbout`, for a notification about a trip as a whole. */

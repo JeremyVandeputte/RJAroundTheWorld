@@ -17,8 +17,6 @@ export type CreateUserInput = {
   password: string;
   role?: UserRole;
   canPublish?: boolean;
-  canComment?: boolean;
-  canReact?: boolean;
   canManageTrips?: boolean;
   mustChangePassword?: boolean;
 };
@@ -54,8 +52,6 @@ export async function createUser(db: Db, input: CreateUserInput): Promise<Create
       role: input.role ?? "user",
       // Schema defaults apply when a permission is not specified.
       canPublish: input.canPublish,
-      canComment: input.canComment,
-      canReact: input.canReact,
       canManageTrips: input.canManageTrips,
       mustChangePassword: input.mustChangePassword ?? false,
     })

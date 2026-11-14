@@ -61,20 +61,6 @@ export const messages = {
     created: "Tag créé.",
     renamed: "Tag renommé.",
   },
-  comment: {
-    not_found: "Cette entrée n'existe pas.",
-    comment_not_found: "Ce commentaire n'existe plus.",
-    forbidden: "Vous n'avez pas la permission de faire cela.",
-    invalid_body: "Le commentaire doit contenir entre 1 et 2 000 caractères.",
-    posted: "Commentaire publié.",
-    edited: "Commentaire modifié.",
-    deleted: "Commentaire supprimé.",
-  },
-  reaction: {
-    not_found: "Cet élément n'existe plus.",
-    forbidden: "Vous n'avez pas la permission de réagir.",
-    invalid_type: "Réaction inconnue.",
-  },
   cover: {
     not_found: "Cette photo n'existe plus.",
     forbidden: "Vous n'avez pas le droit de changer cette miniature.",

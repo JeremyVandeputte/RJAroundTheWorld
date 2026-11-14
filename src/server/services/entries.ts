@@ -292,7 +292,7 @@ export function updateEntry(
 }
 
 /**
- * Deletes an entry with its comments, reactions, media rows and notifications.
+ * Deletes an entry with its media rows and notifications.
  * The caller must then remove the entry's media files from disk.
  */
 export function deleteEntry(db: Db, actor: Actor, entryId: number): { ok: true; trip: Trip } | { ok: false; reason: "forbidden" | "not_found" } {

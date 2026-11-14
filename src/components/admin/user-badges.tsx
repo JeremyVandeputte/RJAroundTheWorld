@@ -17,13 +17,11 @@ export function UserBadges({ user }: { user: SessionUser }) {
   );
 }
 
-/** Short summary such as "Commenter, Réagir". */
+/** Short summary such as "Publier, Gérer les voyages". */
 export function permissionSummary(user: SessionUser): string {
   if (user.role === "superuser") return "Toutes les permissions";
   const granted = [
     user.canPublish ? "Publier" : null,
-    user.canComment ? "Commenter" : null,
-    user.canReact ? "Réagir" : null,
     user.canManageTrips ? "Gérer les voyages" : null,
   ].filter(Boolean);
   return granted.length > 0 ? granted.join(", ") : "Lecture seule";

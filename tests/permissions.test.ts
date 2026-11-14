@@ -1,18 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   canBeNotifiedAbout,
-  canComment,
   canCreateEntry,
   canCreateTrip,
-  canDeleteComment,
-  canEditComment,
   canEditEntry,
   canEditTrip,
   canExportTrip,
   canManageUsers,
-  canReact,
+  canReadEntryNotification,
   canViewEntry,
-  canViewSocial,
   canViewTrip,
   canWriteEntries,
   type Actor,
@@ -24,8 +20,6 @@ function user(id: number, overrides: Partial<PermissionUser> = {}): PermissionUs
     id,
     role: "user",
     canPublish: false,
-    canComment: true,
-    canReact: true,
     canManageTrips: false,
     isActive: true,
     mustChangePassword: false,
@@ -35,8 +29,8 @@ function user(id: number, overrides: Partial<PermissionUser> = {}): PermissionUs
 
 // The cast of characters.
 const anonymous: Actor = null;
-const guest = user(1); // default account: Commenter + Réagir
-const readOnly = user(2, { canComment: false, canReact: false });
+const guest = user(1); // default account: reading only
+const readOnly = user(2);
 const publisher = user(3, { canPublish: true });
 const otherPublisher = user(4, { canPublish: true });
 const superuser = user(5, { role: "superuser", canPublish: true });
@@ -187,57 +181,13 @@ describe("writing entries", () => {
   });
 });
 
-describe("comments and reactions", () => {
+describe("notifications about an entry", () => {
   const loggedIn: Name[] = ["guest", "readOnly", "publisher", "otherPublisher", "superuser", "tripOwner", "otherManager"];
-  const withDefaults: Name[] = ["guest", "publisher", "otherPublisher", "superuser", "tripOwner", "otherManager"];
 
-  it("are invisible to anonymous visitors, even as counts", () => {
-    expectAllowed((actor) => canViewSocial(actor, visibleTrip, published), loggedIn);
-  });
-
-  it("follow the visibility of the trip", () => {
-    expectAllowed((actor) => canViewSocial(actor, hiddenTrip, published), ["tripOwner", "superuser"]);
-    expectAllowed((actor) => canComment(actor, hiddenTrip, published), ["tripOwner", "superuser"]);
-    expectAllowed((actor) => canReact(actor, hiddenTrip, published), ["tripOwner", "superuser"]);
-  });
-
-  it("do not exist on drafts", () => {
-    expectAllowed((actor) => canViewSocial(actor, visibleTrip, draft), []);
-    expectAllowed((actor) => canComment(actor, visibleTrip, draft), []);
-    expectAllowed((actor) => canReact(actor, visibleTrip, draft), []);
-  });
-
-  it("require the Commenter permission to comment", () => {
-    expectAllowed((actor) => canComment(actor, visibleTrip, published), withDefaults);
-    expect(canComment({ ...guest, canComment: false }, visibleTrip, published)).toBe(false);
-    // The superuser can always comment, whatever the flags say.
-    expect(canComment({ ...superuser, canComment: false }, visibleTrip, published)).toBe(true);
-  });
-
-  it("require the Réagir permission to react", () => {
-    expectAllowed((actor) => canReact(actor, visibleTrip, published), withDefaults);
-    expect(canReact({ ...guest, canReact: false }, visibleTrip, published)).toBe(false);
-  });
-
-  it("let users change only their own comments, and the superuser any comment", () => {
-    const guestComment = { authorId: guest.id, deletedAt: null };
-    for (const check of [canEditComment, canDeleteComment]) {
-      expectAllowed((actor) => check(actor, visibleTrip, published, guestComment), ["guest", "superuser"]);
-    }
-  });
-
-  it("stop users from changing their comments once Commenter is removed", () => {
-    const guestComment = { authorId: guest.id, deletedAt: null };
-    const muted = { ...guest, canComment: false };
-    expect(canEditComment(muted, visibleTrip, published, guestComment)).toBe(false);
-    expect(canDeleteComment(muted, visibleTrip, published, guestComment)).toBe(false);
-  });
-
-  it("freeze deleted comments and comments of deleted accounts", () => {
-    const deleted = { authorId: guest.id, deletedAt: new Date() };
-    expectAllowed((actor) => canEditComment(actor, visibleTrip, published, deleted), []);
-    const orphan = { authorId: null, deletedAt: null };
-    expectAllowed((actor) => canDeleteComment(actor, visibleTrip, published, orphan), ["superuser"]);
+  it("are only read by logged-in users who can see the published entry", () => {
+    expectAllowed((actor) => canReadEntryNotification(actor, visibleTrip, published), loggedIn);
+    expectAllowed((actor) => canReadEntryNotification(actor, hiddenTrip, published), ["tripOwner", "superuser"]);
+    expectAllowed((actor) => canReadEntryNotification(actor, visibleTrip, draft), []);
   });
 });
 
@@ -268,7 +218,7 @@ describe("restricted accounts", () => {
       expect(canEditTrip(actor, hiddenTrip)).toBe(false);
       expect(canCreateTrip(actor)).toBe(false);
       expect(canCreateEntry(actor, visibleTrip)).toBe(false);
-      expect(canViewSocial(actor, visibleTrip, published)).toBe(false);
+      expect(canReadEntryNotification(actor, visibleTrip, published)).toBe(false);
       expect(canManageUsers(actor)).toBe(false);
       // Nothing is readable without a usable account.
       expect(canViewEntry(actor, visibleTrip, published)).toBe(false);

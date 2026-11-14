@@ -1,20 +1,11 @@
 import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import type { Db } from "@/server/db/client";
-import {
-  comments,
-  entries,
-  entryPeople,
-  notifications,
-  trips,
-  users,
-  type NotificationType,
-  type ReactionType,
-} from "@/server/db/schema";
+import { entries, entryPeople, notifications, trips, users, type NotificationType } from "@/server/db/schema";
 import {
   canBeNotifiedAbout,
   canBeNotifiedAboutTrip,
+  canReadEntryNotification,
   canReadTripNotification,
-  canViewSocial,
   type Actor,
   type PermissionUser,
 } from "@/server/permissions";
@@ -25,8 +16,6 @@ import {
 // - an entry is published: everyone who can see it, except its author
 //   (with a mention for the people identified in it);
 // - someone is identified in an entry that is already published: that person;
-// - a comment or a reaction on an entry: its author and the people identified in it;
-// - a reply or a reaction on a comment: the author of that comment;
 // - a trip becomes visible: everyone who can now see it.
 // Never oneself, and only people allowed to see what it is about: a hidden
 // trip only notifies its creator and the superuser. Visibility is checked
@@ -39,8 +28,6 @@ const permissionColumns = {
   id: users.id,
   role: users.role,
   canPublish: users.canPublish,
-  canComment: users.canComment,
-  canReact: users.canReact,
   canManageTrips: users.canManageTrips,
   isActive: users.isActive,
   mustChangePassword: users.mustChangePassword,
@@ -64,8 +51,6 @@ type NewNotification = {
   actorId: number;
   entry: EntryRef;
   trip: TripRef;
-  commentId?: number | null;
-  reactionType?: ReactionType | null;
   now?: Date;
 };
 
@@ -79,19 +64,11 @@ function notify(db: Db, recipients: PermissionUser[], tagged: Set<number>, detai
       type: details.type,
       tripId: details.trip.id,
       entryId: details.entry.id,
-      commentId: details.commentId ?? null,
       isTagged: tagged.has(user.id) && user.id !== details.entry.authorId,
-      reactionType: details.reactionType ?? null,
       createdAt: details.now ?? new Date(),
     }));
   if (rows.length > 0) db.insert(notifications).values(rows).run();
   return rows.length;
-}
-
-/** The author of the entry and the people identified in it. */
-function entryAudience(db: Db, entry: EntryRef) {
-  const tagged = taggedIds(db, entry.id);
-  return { recipients: loadUsers(db, [entry.authorId, ...tagged]), tagged: new Set(tagged) };
 }
 
 /** First publication of an entry: everyone who can see it, except its author. */
@@ -149,68 +126,6 @@ export function notifyTripRevealed(db: Db, actorId: number, trip: TripRef, now =
   return rows.length;
 }
 
-/** A new comment, or a reply to `repliedTo`. */
-export function notifyComment(
-  db: Db,
-  actorId: number,
-  trip: TripRef,
-  entry: EntryRef,
-  comment: { id: number },
-  repliedTo: { authorId: number | null } | null,
-  now = new Date(),
-): number {
-  if (repliedTo) {
-    const recipients = repliedTo.authorId === null ? [] : loadUsers(db, [repliedTo.authorId]);
-    return notify(db, recipients, new Set(), { type: "comment_reply", actorId, entry, trip, commentId: comment.id, now });
-  }
-  const { recipients, tagged } = entryAudience(db, entry);
-  return notify(db, recipients, tagged, { type: "entry_comment", actorId, entry, trip, commentId: comment.id, now });
-}
-
-/**
- * Follows a reaction: a new reaction notifies, a changed one updates the
- * existing notification (no duplicate), a removed one deletes it.
- */
-export function notifyReaction(
-  db: Db,
-  actorId: number,
-  change: "added" | "changed" | "removed",
-  type: ReactionType,
-  trip: TripRef,
-  entry: EntryRef,
-  comment: { id: number; authorId: number | null } | null,
-  now = new Date(),
-): void {
-  const kind: NotificationType = comment ? "comment_reaction" : "entry_reaction";
-  const sameReaction = and(
-    eq(notifications.actorId, actorId),
-    eq(notifications.type, kind),
-    eq(notifications.entryId, entry.id),
-    comment ? eq(notifications.commentId, comment.id) : isNull(notifications.commentId),
-  );
-
-  if (change === "removed") {
-    db.delete(notifications).where(sameReaction).run();
-    return;
-  }
-  if (change === "changed") {
-    db.update(notifications).set({ reactionType: type }).where(sameReaction).run();
-    return;
-  }
-  if (comment) {
-    const recipients = comment.authorId === null ? [] : loadUsers(db, [comment.authorId]);
-    notify(db, recipients, new Set(), { type: kind, actorId, entry, trip, commentId: comment.id, reactionType: type, now });
-  } else {
-    const { recipients, tagged } = entryAudience(db, entry);
-    notify(db, recipients, tagged, { type: kind, actorId, entry, trip, reactionType: type, now });
-  }
-}
-
-/** Removes the notifications about a comment whose content is gone. */
-export function forgetComment(db: Db, commentId: number): void {
-  db.delete(notifications).where(eq(notifications.commentId, commentId)).run();
-}
-
 // --- Reading ------------------------------------------------------------------
 
 export type NotificationView = {
@@ -226,24 +141,15 @@ export type NotificationView = {
   isOwnEntry: boolean;
   /** The recipient is currently identified in the entry. */
   isTagged: boolean;
-  reactionType: ReactionType | null;
-  /** Start of the comment or reply, for comment notifications. */
-  excerpt: string | null;
   /** Page (and anchor) the notification leads to. */
   href: string;
 };
 
 export const NOTIFICATION_LIST_LIMIT = 100;
-const EXCERPT_LENGTH = 120;
-
-function excerpt(body: string): string {
-  const flat = body.replace(/\s+/g, " ").trim();
-  return flat.length > EXCERPT_LENGTH ? `${flat.slice(0, EXCERPT_LENGTH - 1)}…` : flat;
-}
 
 /**
  * Notifications of the viewer that are still relevant: what they are about
- * is still visible to them, and the comment still exists.
+ * is still visible to them.
  */
 function visibleNotifications(db: Db, viewer: Actor, options: { unreadOnly?: boolean; id?: number } = {}) {
   if (!viewer) return [];
@@ -252,12 +158,11 @@ function visibleNotifications(db: Db, viewer: Actor, options: { unreadOnly?: boo
   if (options.id !== undefined) conditions.push(eq(notifications.id, options.id));
 
   const rows = db
-    .select({ notification: notifications, entry: entries, trip: trips, comment: comments, actorName: users.displayName })
+    .select({ notification: notifications, entry: entries, trip: trips, actorName: users.displayName })
     .from(notifications)
     .innerJoin(trips, eq(trips.id, notifications.tripId))
     .innerJoin(users, eq(users.id, notifications.actorId))
     .leftJoin(entries, eq(entries.id, notifications.entryId))
-    .leftJoin(comments, eq(comments.id, notifications.commentId))
     .where(and(...conditions))
     .orderBy(desc(notifications.createdAt), desc(notifications.id))
     .all();
@@ -270,10 +175,9 @@ function visibleNotifications(db: Db, viewer: Actor, options: { unreadOnly?: boo
   return rows
     .filter((row) => {
       if (!row.entry) return row.notification.type === "trip_revealed" && canReadTripNotification(viewer, row.trip);
-      if (row.notification.commentId !== null && (!row.comment || row.comment.deletedAt !== null)) return false;
       // No longer identified in it: the identification notice goes away.
       if (row.notification.type === "entry_tagged" && !taggedIn.has(row.entry.id)) return false;
-      return canViewSocial(viewer, row.trip, row.entry);
+      return canReadEntryNotification(viewer, row.trip, row.entry);
     })
     .map((row) => ({ ...row, isTagged: row.entry !== null && taggedIn.has(row.entry.id) && row.entry.authorId !== viewer.id }));
 }
@@ -281,14 +185,11 @@ function visibleNotifications(db: Db, viewer: Actor, options: { unreadOnly?: boo
 type Row = ReturnType<typeof visibleNotifications>[number];
 
 function hrefOf(row: Row): string {
-  if (!row.entry) return `/trips/${row.trip.slug}`;
-  const page = `/trips/${row.trip.slug}/entries/${row.entry.id}`;
-  return row.notification.commentId !== null ? `${page}#comment-${row.notification.commentId}` : page;
+  return row.entry ? `/trips/${row.trip.slug}/entries/${row.entry.id}` : `/trips/${row.trip.slug}`;
 }
 
 function toView(row: Row, viewer: NonNullable<Actor>): NotificationView {
   const { notification } = row;
-  const showsCommentText = notification.type === "entry_comment" || notification.type === "comment_reply";
   return {
     id: notification.id,
     type: notification.type,
@@ -299,8 +200,6 @@ function toView(row: Row, viewer: NonNullable<Actor>): NotificationView {
     tripTitle: row.trip.title,
     isOwnEntry: row.entry?.authorId === viewer.id,
     isTagged: row.isTagged,
-    reactionType: notification.reactionType,
-    excerpt: showsCommentText && row.comment ? excerpt(row.comment.body) : null,
     href: hrefOf(row),
   };
 }

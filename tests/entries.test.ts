@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { SessionUser } from "@/server/auth/sessions";
 import type { Db } from "@/server/db/client";
-import { comments, entries, entryPeople, users } from "@/server/db/schema";
+import { entries, entryPeople, users } from "@/server/db/schema";
 import type { Actor } from "@/server/permissions";
 import {
   createEntry,
@@ -238,11 +238,11 @@ describe("who can write", () => {
     });
   });
 
-  it("deletes an entry with its comments", () => {
+  it("deletes an entry with the people identified in it", () => {
     const entry = mustCreateEntry(cast.publisher, visibleTrip, "publish");
-    db.insert(comments).values({ entryId: entry.id, authorId: cast.guest.id, body: "Super" }).run();
+    expect(db.select().from(entryPeople).all()).not.toHaveLength(0);
     expect(deleteEntry(db, cast.publisher, entry.id).ok).toBe(true);
-    expect(db.select().from(comments).all()).toHaveLength(0);
+    expect(db.select().from(entryPeople).all()).toHaveLength(0);
   });
 });
 

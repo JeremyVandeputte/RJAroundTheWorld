@@ -10,19 +10,15 @@ import { emptyFormState } from "@/server/actions/form-state";
 type PermissionsFormProps = {
   userId: number;
   canPublish: boolean;
-  canComment: boolean;
-  canReact: boolean;
   canManageTrips: boolean;
 };
 
-export function PermissionsForm({ userId, canPublish, canComment, canReact, canManageTrips }: PermissionsFormProps) {
+export function PermissionsForm({ userId, canPublish, canManageTrips }: PermissionsFormProps) {
   const [state, formAction] = useActionState(updatePermissionsAction, emptyFormState);
   return (
     <form action={formAction} className="space-y-3">
       <input type="hidden" name="userId" value={userId} />
       <div>
-        <CheckboxField label="Commenter" name="canComment" defaultChecked={canComment} />
-        <CheckboxField label="Réagir" name="canReact" defaultChecked={canReact} />
         <CheckboxField
           label="Publier"
           name="canPublish"

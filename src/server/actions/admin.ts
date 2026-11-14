@@ -33,8 +33,6 @@ function refreshAdminPages(): void {
 function readPermissions(formData: FormData): UserPermissions {
   return {
     canPublish: formBoolean(formData, "canPublish"),
-    canComment: formBoolean(formData, "canComment"),
-    canReact: formBoolean(formData, "canReact"),
     canManageTrips: formBoolean(formData, "canManageTrips"),
   };
 }

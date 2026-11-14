@@ -5,7 +5,7 @@
 //
 // Only the people who manage the trip (its author with "Gérer les voyages",
 // and the superuser) may export it. It contains the published entries only
-// (drafts are work in progress), with their comments.
+// (drafts are work in progress).
 
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { stat } from "node:fs/promises";
@@ -18,13 +18,11 @@ import type { Db } from "@/server/db/client";
 import { entries, entryPeople, media, users } from "@/server/db/schema";
 import { canExportTrip, canViewEntry, type Actor } from "@/server/permissions";
 import { resolveMediaPath } from "@/server/media/storage";
-import { listCommentThreads, type CommentView } from "@/server/services/comments";
 import { tagsOfEntries } from "@/server/services/tags";
 import type { Trip } from "@/server/services/trips";
 import type { ZipSource } from "./zip";
 
 type ExportedFile = { name: string; kind: "photo" | "video" };
-type ExportedComment = { author: string | null; date: string; body: string; replies: ExportedComment[] };
 type ExportedPoint = { lat: number; lng: number; name: string | null };
 
 export type ExportedEntry = {
@@ -37,7 +35,6 @@ export type ExportedEntry = {
   pointA: ExportedPoint | null;
   pointB: ExportedPoint | null;
   files: ExportedFile[];
-  comments: ExportedComment[];
 };
 
 export type TripExport = {
@@ -53,15 +50,6 @@ const EXTENSIONS: Record<string, string> = { "image/jpeg": "jpg", "video/mp4": "
 
 function extensionOf(mimeType: string, filePath: string): string {
   return EXTENSIONS[mimeType] ?? (path.extname(filePath).slice(1) || "bin");
-}
-
-function toComment(view: CommentView, replies: CommentView[] = []): ExportedComment {
-  return {
-    author: view.isDeleted ? null : view.authorName,
-    date: view.createdAt.toISOString(),
-    body: view.isDeleted ? "" : view.body,
-    replies: replies.map((reply) => toComment(reply)),
-  };
 }
 
 /**
@@ -138,7 +126,6 @@ export async function buildTripExport(db: Db, actor: Actor, trip: Trip, mediaDir
       pointA: point(entry.pointALat, entry.pointALng, entry.pointAName),
       pointB: point(entry.pointBLat, entry.pointBLng, entry.pointBName),
       files,
-      comments: (listCommentThreads(db, actor, trip, entry) ?? []).map((thread) => toComment(thread, thread.replies)),
     };
   });
 
@@ -198,13 +185,6 @@ function place(point: ExportedPoint, fallback: string): string {
   return `${label} (<a href="${href}" rel="noopener noreferrer">${coordinates}</a>)`;
 }
 
-function comment(item: ExportedComment): string {
-  const when = new Date(item.date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
-  const body = item.author === null ? "<em>Commentaire supprimé</em>" : escapeHtml(item.body).replace(/\n/g, "<br>");
-  const replies = item.replies.length > 0 ? `<ul>${item.replies.map((reply) => `<li>${comment(reply)}</li>`).join("")}</ul>` : "";
-  return `<p><strong>${escapeHtml(item.author ?? "Compte supprimé")}</strong> · ${when}<br>${body}</p>${replies}`;
-}
-
 function renderTripHtml(trip: Trip, list: ExportedEntry[], coverName: string | null, now: Date): string {
   const exportedOn = now.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
   const entriesHtml = list
@@ -221,17 +201,12 @@ function renderTripHtml(trip: Trip, list: ExportedEntry[], coverName: string | n
             : `<video src="media/${encodeURI(file.name)}" controls preload="metadata"></video>`,
         )
         .join("\n");
-      const comments =
-        entry.comments.length > 0
-          ? `<section class="comments"><h3>Commentaires</h3><ul>${entry.comments.map((item) => `<li>${comment(item)}</li>`).join("")}</ul></section>`
-          : "";
       return `<article>
 <p class="date">${escapeHtml(formatDate(entry.date))}</p>
 <h2>${escapeHtml(entry.title)}</h2>
 <p class="facts">${facts.join(" · ")}</p>
 ${richText(entry.body)}
 ${files ? `<div class="media">${files}</div>` : ""}
-${comments}
 </article>`;
     })
     .join("\n");
@@ -254,8 +229,6 @@ ${comments}
   .media { display: grid; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); gap: 0.5rem; margin-top: 0.75rem; }
   .media img, .media video { width: 100%; border-radius: 0.375rem; background: #e5e1da; }
   .media img { aspect-ratio: 4 / 3; object-fit: cover; }
-  .comments ul { list-style: none; padding-left: 0; } .comments ul ul { padding-left: 1.25rem; border-left: 2px solid #e5e1da; }
-  .comments p { margin: 0.4rem 0; font-size: 0.95rem; }
   footer { margin-top: 3rem; font-size: 0.85rem; }
   /* Printing (or "Save as PDF"): white paper, no video players. */
   @media print {

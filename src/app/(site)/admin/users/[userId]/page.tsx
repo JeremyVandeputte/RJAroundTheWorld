@@ -51,8 +51,6 @@ export default async function AdminUserPage({ params }: { params: Promise<{ user
               <PermissionsForm
                 userId={user.id}
                 canPublish={user.canPublish}
-                canComment={user.canComment}
-                canReact={user.canReact}
                 canManageTrips={user.canManageTrips}
               />
             </div>
@@ -112,7 +110,7 @@ export default async function AdminUserPage({ params }: { params: Promise<{ user
             <details className="mt-2">
               <summary className="min-h-11 cursor-pointer py-2 text-red-800">Supprimer définitivement…</summary>
               <p className="mt-2 mb-3 text-sm text-muted">
-                Le compte, ses commentaires et ses réactions seront supprimés. Cette action est irréversible. Un compte
+                Le compte sera supprimé. Cette action est irréversible. Un compte
                 qui a écrit des entrées ne peut pas être supprimé : désactivez-le.
               </p>
               <UserActionForm

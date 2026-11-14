@@ -6,7 +6,6 @@ import type { Db } from "@/server/db/client";
 import { notifications, users } from "@/server/db/schema";
 import type { Actor } from "@/server/permissions";
 import { deleteUser } from "@/server/services/admin";
-import { addComment, deleteComment, type Comment } from "@/server/services/comments";
 import { createEntry, deleteEntry, updateEntry, type Entry, type EntryInput } from "@/server/services/entries";
 import {
   countUnreadNotifications,
@@ -14,7 +13,6 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
 } from "@/server/services/notifications";
-import { react } from "@/server/services/reactions";
 import { createTrip, deleteTrip, updateTrip, type Trip } from "@/server/services/trips";
 import { entryInput, insertCast, insertUser, tripInput, makeTrip } from "./helpers/fixtures";
 import { createTestDb } from "./helpers/test-db";
@@ -33,11 +31,6 @@ function mustEntry(intent: "save" | "publish", overrides: Partial<EntryInput> = 
   const result = createEntry(db, actor, inTrip.id, entryInput({ peopleIds: [cast.guest.id], ...overrides }), intent);
   if (!result.ok) throw new Error(result.reason);
   return result.entry;
-}
-function mustComment(actor: Actor, entry: Entry, body: string, replyToId: number | null = null): Comment {
-  const result = addComment(db, actor, entry.id, { body, replyToId });
-  if (!result.ok) throw new Error(result.reason);
-  return result.comment;
 }
 /** Raw notification rows, as "recipient:type". */
 const sent = () =>
@@ -126,147 +119,12 @@ describe("publishing an entry", () => {
   });
 });
 
-describe("comments", () => {
-  let entry: Entry;
-  beforeEach(() => {
-    entry = mustEntry("publish", { peopleIds: [cast.guest.id, cast.otherPublisher.id] });
-    clear();
-  });
-
-  it("a comment notifies the author of the entry and the people identified in it", () => {
-    mustComment(paulette, entry, "Bravo");
-    expect(sent()).toEqual(["marie:entry_comment", "paul:entry_comment", "romane:entry_comment"]);
-  });
-
-  it("never notifies the commenter themselves", () => {
-    mustComment(cast.guest, entry, "C'était super");
-    expect(sent()).toEqual(["paul:entry_comment", "romane:entry_comment"]);
-    clear();
-    mustComment(cast.publisher, entry, "Merci");
-    expect(sent()).toEqual(["marie:entry_comment", "paul:entry_comment"]);
-  });
-
-  it("a reply notifies the author of the comment answered, and only them", () => {
-    const parent = mustComment(paulette, entry, "Question ?");
-    clear();
-    mustComment(cast.superuser, entry, "Réponse", parent.id);
-    expect(sent()).toEqual(["paulette:comment_reply"]);
-  });
-
-  it("a reply to a reply notifies the author of that reply", () => {
-    const parent = mustComment(paulette, entry, "Question ?");
-    const reply = mustComment(cast.superuser, entry, "Réponse", parent.id);
-    clear();
-    mustComment(cast.guest, entry, "Réponse à la réponse", reply.id);
-    expect(sent()).toEqual(["admin:comment_reply"]);
-  });
-
-  it("answering one's own comment notifies nobody", () => {
-    const parent = mustComment(paulette, entry, "Question ?");
-    clear();
-    mustComment(paulette, entry, "Précision", parent.id);
-    expect(sent()).toEqual([]);
-  });
-
-  it("describes the comment and leads to it", () => {
-    const comment = mustComment(paulette, entry, "Bravo   pour\ncette journée");
-    const [forRomane] = inbox(cast.publisher);
-    const [forMarie] = inbox(cast.guest);
-    expect(forRomane).toMatchObject({ excerpt: "Bravo pour cette journée", isOwnEntry: true });
-    expect(forRomane?.href).toBe(`/trips/${trip.slug}/entries/${entry.id}#comment-${comment.id}`);
-    expect(sentence(forRomane!)).toBe("paulette a commenté votre entrée « Première baignade ».");
-    expect(sentence(forMarie!)).toBe(
-      "paulette a commenté « Première baignade », une entrée où vous apparaissez.",
-    );
-
-    const reply = mustComment(cast.publisher, entry, "x".repeat(300), comment.id);
-    const [replyNotice] = inbox(paulette);
-    expect(replyNotice?.href).toBe(`/trips/${trip.slug}/entries/${entry.id}#comment-${reply.id}`);
-    expect(replyNotice?.excerpt).toHaveLength(120);
-    expect(sentence(replyNotice!)).toBe("romane a répondu à votre commentaire sur « Première baignade ».");
-  });
-
-  it("disappear when the comment is deleted", () => {
-    const lonely = mustComment(paulette, entry, "Seul");
-    const parent = mustComment(paulette, entry, "Avec réponse");
-    mustComment(cast.guest, entry, "Réponse", parent.id);
-    expect(inbox(cast.publisher)).toHaveLength(2);
-
-    deleteComment(db, paulette, lonely.id); // removed for good
-    deleteComment(db, paulette, parent.id); // kept as a "deleted" placeholder
-    expect(inbox(cast.publisher)).toEqual([]);
-    // The reply still exists: the notification about it stays.
-    expect(inbox(paulette).map((notice) => notice.excerpt)).toEqual(["Réponse"]);
-  });
-});
-
-describe("reactions", () => {
-  let entry: Entry;
-  beforeEach(() => {
-    entry = mustEntry("publish");
-    clear();
-  });
-
-  it("a reaction on an entry notifies its author and the people identified in it, never the person reacting", () => {
-    react(db, paulette, { entryId: entry.id }, "love");
-    expect(sent()).toEqual(["marie:entry_reaction", "romane:entry_reaction"]);
-    clear();
-    react(db, cast.guest, { entryId: entry.id }, "love");
-    expect(sent()).toEqual(["romane:entry_reaction"]);
-  });
-
-  it("changing a reaction updates the notification instead of sending a new one", () => {
-    react(db, paulette, { entryId: entry.id }, "like");
-    react(db, paulette, { entryId: entry.id }, "haha");
-    expect(sent()).toEqual(["marie:entry_reaction", "romane:entry_reaction"]);
-    expect(inbox(cast.publisher)[0]?.reactionType).toBe("haha");
-    expect(sentence(inbox(cast.publisher)[0]!)).toBe("paulette a réagi 😆 à votre entrée « Première baignade ».");
-  });
-
-  it("removing a reaction removes its notification", () => {
-    react(db, paulette, { entryId: entry.id }, "wow");
-    react(db, paulette, { entryId: entry.id }, "wow");
-    expect(sent()).toEqual([]);
-  });
-
-  it("removing one person's reaction leaves the others' notifications", () => {
-    react(db, paulette, { entryId: entry.id }, "wow");
-    react(db, cast.superuser, { entryId: entry.id }, "like");
-    react(db, paulette, { entryId: entry.id }, "wow");
-    expect(sent()).toEqual(["marie:entry_reaction", "romane:entry_reaction"]);
-    expect(inbox(cast.publisher)[0]?.actorName).toBe("admin");
-  });
-
-  it("a reaction on a comment notifies the author of that comment only", () => {
-    const comment = mustComment(paulette, entry, "Avis");
-    clear();
-    react(db, cast.superuser, { commentId: comment.id }, "sad");
-    expect(sent()).toEqual(["paulette:comment_reaction"]);
-    const [notice] = inbox(paulette);
-    expect(notice?.href).toBe(`/trips/${trip.slug}/entries/${entry.id}#comment-${comment.id}`);
-    expect(sentence(notice!)).toBe("admin a réagi 😢 à votre commentaire sur « Première baignade ».");
-
-    react(db, cast.superuser, { commentId: comment.id }, "sad");
-    expect(sent()).toEqual([]);
-  });
-
-  it("reacting to one's own comment notifies nobody", () => {
-    const comment = mustComment(paulette, entry, "Avis");
-    clear();
-    react(db, paulette, { commentId: comment.id }, "like");
-    expect(sent()).toEqual([]);
-  });
-});
-
 describe("visibility of notifications", () => {
   it("are never sent about a hidden trip to people who cannot see it", () => {
     const hidden = mustTrip(tripOwner, { title: "Caché", isVisible: false });
     // Identifying people in a hidden trip does not give them access.
-    const entry = mustEntry("publish", { peopleIds: [cast.guest.id, cast.superuser.id] }, tripOwner, hidden);
-    clear();
-    mustComment(cast.superuser, entry, "Chut");
-    react(db, cast.superuser, { entryId: entry.id }, "like");
-    expect(sent()).toEqual(["chloe:entry_comment", "chloe:entry_reaction"]);
+    mustEntry("publish", { peopleIds: [cast.guest.id, cast.superuser.id] }, tripOwner, hidden);
+    expect(sent()).toEqual(["admin:entry_published"]);
   });
 
   it("disappear while the trip is hidden, and come back when it is visible again", () => {
@@ -290,13 +148,12 @@ describe("visibility of notifications", () => {
     expect(inbox(cast.guest)).toEqual([]);
   });
 
-  it("are deleted with the entry, and with the account of the person who acted", () => {
+  it("are deleted with the entry, and with the account of their recipient", () => {
     const entry = mustEntry("publish");
-    mustComment(paulette, entry, "Avis");
-    expect(sent().length).toBeGreaterThan(0);
+    expect(sent()).toContain("paulette:entry_published");
 
     deleteUser(db, cast.superuser, paulette.id);
-    expect(sent().some((row) => row.startsWith("romane:entry_comment"))).toBe(false);
+    expect(sent().some((row) => row.startsWith("paulette:"))).toBe(false);
 
     deleteEntry(db, cast.publisher, entry.id);
     expect(sent()).toEqual([]);
@@ -326,13 +183,11 @@ describe("reading notifications", () => {
   it("lists the newest first, with a count of unread ones", () => {
     const first = mustEntry("publish", { title: "Premier" });
     mustEntry("publish", { title: "Second" });
-    mustComment(cast.otherPublisher, first, "Avis");
     expect(inbox(cast.guest).map((notice) => [notice.type, notice.entryTitle])).toEqual([
-      ["entry_comment", "Premier"],
       ["entry_published", "Second"],
-      ["entry_published", "Premier"],
+      ["entry_published", first.title],
     ]);
-    expect(countUnreadNotifications(db, cast.guest)).toBe(3);
+    expect(countUnreadNotifications(db, cast.guest)).toBe(2);
   });
 
   it("marks one notification as read and gives where it leads", () => {
@@ -415,7 +270,6 @@ describe("being identified after publication", () => {
   });
 
   it("reflects the current identification in other notifications", () => {
-    mustComment(cast.otherPublisher, entry, "Avis");
     expect(inbox(cast.guest)[0]?.isTagged).toBe(true);
     edit(cast.publisher, [paulette.id]);
     // Marie is no longer identified: her earlier notices no longer say she is.

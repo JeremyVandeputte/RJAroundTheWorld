@@ -8,7 +8,6 @@ import { buildTripExport, escapeHtml } from "@/server/export/trip-export";
 import { zipStream, type ZipSource } from "@/server/export/zip";
 import { startUpload, type UploadConfig } from "@/server/media/upload";
 import type { Actor } from "@/server/permissions";
-import { addComment, deleteComment } from "@/server/services/comments";
 import { createEntry, type Entry } from "@/server/services/entries";
 import type { Trip } from "@/server/services/trips";
 import { entryInput, insertCast, makeTrip } from "./helpers/fixtures";
@@ -90,18 +89,12 @@ describe("trip export", () => {
   });
   afterEach(() => removeMediaDir(config));
 
-  it("contains the published entries, oldest first, with their photos, videos and comments", async () => {
+  it("contains the published entries, oldest first, with their photos and videos", async () => {
     const plage = entry("publish", { title: "Plage des Salines", date: "2026-11-11", body: "Une eau **turquoise**.", newTags: ["Baignade"] });
     entry("publish", { title: "Pelée", date: "2026-11-14", pointB: { lat: 14.81, lng: -61.16, name: "Sommet" } });
     entry("save", { title: "Brouillon", date: "2026-11-12" });
     const photo = await upload(plage, "photo", await samplePhoto({ width: 800, height: 600 }));
     await upload(plage, "video", sampleVideo(5000));
-    const comment = addComment(db, cast.guest, plage.id, { body: "Magnifique !", replyToId: null });
-    const other = addComment(db, cast.guest, plage.id, { body: "Quelle couleur", replyToId: null });
-    if (!comment.ok || !other.ok) throw new Error("comment");
-    addComment(db, cast.publisher, plage.id, { body: "Merci", replyToId: comment.comment.id });
-    // A deleted comment with replies stays as a placeholder; without replies it disappears.
-    deleteComment(db, cast.guest, comment.comment.id);
 
     const result = (await archive(cast.superuser))!;
     expect(result.built.fileName).toBe(`${trip.slug}.zip`);
@@ -112,9 +105,7 @@ describe("trip export", () => {
       { name: "2026-11-11-plage-des-salines.jpg", kind: "photo" },
       { name: "2026-11-11-plage-des-salines.mp4", kind: "video" },
     ]);
-    expect(first.comments).toHaveLength(2);
-    expect(first.comments[0]).toMatchObject({ author: null, body: "", replies: [{ body: "Merci" }] });
-    expect(first.comments[1]).toMatchObject({ author: cast.guest.displayName, body: "Quelle couleur" });
+    expect(first).not.toHaveProperty("comments");
 
     // Files are the stored ones, byte for byte.
     const stored = db.select().from(media).where(eq(media.publicId, photo.publicId)).get()!;
@@ -126,7 +117,7 @@ describe("trip export", () => {
     expect(result.html).toContain('<img src="media/2026-11-11-plage-des-salines.jpg"');
     expect(result.html).toContain('<video src="media/2026-11-11-plage-des-salines.mp4"');
     expect(result.html).toContain("Une eau <strong>turquoise</strong>.");
-    expect(result.html).toContain("Commentaire supprimé");
+    expect(result.html).not.toContain("Commentaire");
     expect(result.html).not.toContain("<script");
     expect(result.html).not.toMatch(/src="https?:/);
     expect(result.html).not.toContain("Brouillon");

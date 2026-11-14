@@ -1,7 +1,7 @@
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { distanceKm } from "@/lib/geo";
 import type { Db } from "@/server/db/client";
-import { comments, entries, entryPeople, media, users } from "@/server/db/schema";
+import { entries, entryPeople, media, users } from "@/server/db/schema";
 import type { Actor } from "@/server/permissions";
 import { tagsOfEntries, type Tag } from "./tags";
 import { listTrips, type Trip } from "./trips";
@@ -12,7 +12,6 @@ export type Counts = {
   days: number;
   photos: number;
   videos: number;
-  comments: number;
   /** Straight-line length of the routes (point A to point B), in kilometres. */
   routeKm: number;
 };
@@ -69,7 +68,6 @@ export function journalStats(db: Db, actor: Actor): JournalStats {
       days: new Set(published.map(({ entry }) => entry.date)).size,
       photos: 0,
       videos: 0,
-      comments: 0,
       routeKm: 0,
     };
     if (ids.length === 0) return counts;
@@ -84,11 +82,6 @@ export function journalStats(db: Db, actor: Actor): JournalStats {
       if (row.kind === "photo") counts.photos += 1;
       else counts.videos += 1;
     }
-    counts.comments = db
-      .select({ id: comments.id })
-      .from(comments)
-      .where(and(inArray(comments.entryId, ids), isNull(comments.deletedAt)))
-      .all().length;
     for (const tags of tagsOfEntries(db, ids).values()) for (const tag of tags) bump(tagCounts, tag);
     for (const person of db
       .select({ id: users.id, displayName: users.displayName })
@@ -110,7 +103,6 @@ export function journalStats(db: Db, actor: Actor): JournalStats {
       days: sum("days"),
       photos: sum("photos"),
       videos: sum("videos"),
-      comments: sum("comments"),
       routeKm: sum("routeKm"),
     },
     tags: rank(tagCounts, (tag) => tag.name),

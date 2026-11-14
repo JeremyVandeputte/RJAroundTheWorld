@@ -16,7 +16,7 @@ export function DeleteTripForm({ tripId, entryCount }: { tripId: number; entryCo
       <summary className="min-h-11 cursor-pointer py-2 text-red-800">Supprimer ce voyage…</summary>
       <p className="mt-2 mb-3 text-sm text-muted">
         {entryCount > 0
-          ? `Le voyage sera supprimé définitivement avec ${entriesLabel}, y compris celles écrites par d'autres personnes, leurs commentaires et leurs réactions.`
+          ? `Le voyage sera supprimé définitivement avec ${entriesLabel}, y compris celles écrites par d'autres personnes, et leurs photos et vidéos.`
           : "Le voyage sera supprimé définitivement. Il ne contient aucune entrée."}
       </p>
       <form action={formAction} className="space-y-3">

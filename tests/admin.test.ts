@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { createSession, getSessionUser, type SessionUser } from "@/server/auth/sessions";
 import type { Db } from "@/server/db/client";
-import { comments, entries, entryPeople, reactions, trips, users } from "@/server/db/schema";
+import { entries, entryPeople, trips, users } from "@/server/db/schema";
 import {
   adminCreateUser,
   deleteUser,
@@ -19,7 +19,7 @@ import { createTestDb } from "./helpers/test-db";
 import { GOOD_PASSWORD, testEnv } from "./helpers/test-env";
 
 const env = testEnv();
-const defaults = { canPublish: false, canComment: true, canReact: true, canManageTrips: false };
+const defaults = { canPublish: false, canManageTrips: false };
 
 let db: Db;
 let superuser: SessionUser;
@@ -68,7 +68,7 @@ describe("access to administration", () => {
   });
 
   it("lets a user with every permission do nothing more: only the role counts", () => {
-    const powerUser = { ...paul, canPublish: true, canComment: true, canReact: true, canManageTrips: true };
+    const powerUser = { ...paul, canPublish: true, canManageTrips: true };
     expect(listUsers(db, powerUser).ok).toBe(false);
   });
 
@@ -138,7 +138,7 @@ describe("creating an account", () => {
 
 describe("permissions", () => {
   it("can be switched one by one", () => {
-    const chosen = { canPublish: true, canComment: false, canReact: true, canManageTrips: true };
+    const chosen = { canPublish: true, canManageTrips: true };
     expect(updateUserPermissions(db, superuser, marie.id, chosen)).toEqual({ ok: true });
     expect(stored(marie.id)).toMatchObject(chosen);
     expect(updateUserPermissions(db, superuser, marie.id, { ...chosen, canManageTrips: false })).toEqual({ ok: true });
@@ -147,13 +147,8 @@ describe("permissions", () => {
 
   it("take effect immediately on existing sessions", () => {
     const { token } = createSession(db, marie.id, env);
-    updateUserPermissions(db, superuser, marie.id, {
-      canPublish: false,
-      canComment: false,
-      canReact: false,
-      canManageTrips: false,
-    });
-    expect(getSessionUser(db, token, env)).toMatchObject({ canComment: false, canReact: false });
+    updateUserPermissions(db, superuser, marie.id, { canPublish: true, canManageTrips: true });
+    expect(getSessionUser(db, token, env)).toMatchObject({ canPublish: true, canManageTrips: true });
   });
 });
 
@@ -219,47 +214,20 @@ describe("deleting an account", () => {
       .get().id;
   });
 
-  const comment = (authorId: number, body: string, parentId?: number) =>
-    db.insert(comments).values({ entryId, authorId, body, parentId }).returning().get().id;
-
   it("is refused for an account that wrote entries", () => {
     expect(deleteUser(db, superuser, paul.id)).toEqual({ ok: false, reason: "has_entries" });
     expect(stored(paul.id)).toBeDefined();
   });
 
-  it("removes the account with its sessions, reactions and tags", async () => {
+  it("removes the account with its sessions and identifications", async () => {
     const { token } = createSession(db, marie.id, env);
-    db.insert(reactions).values({ userId: marie.id, entryId, type: "love" }).run();
     db.insert(entryPeople).values({ entryId, userId: marie.id }).run();
 
     expect(deleteUser(db, superuser, marie.id)).toEqual({ ok: true });
 
     expect(stored(marie.id)).toBeUndefined();
     expect(getSessionUser(db, token, env)).toBeNull();
-    expect(db.select().from(reactions).all()).toHaveLength(0);
     expect(db.select().from(entryPeople).all()).toHaveLength(0);
     expect((await tryLogin("marie", GOOD_PASSWORD)).ok).toBe(false);
-  });
-
-  it("removes its comments but keeps threads that have replies from others", () => {
-    const alone = comment(marie.id, "Marie, no replies");
-    const withReply = comment(marie.id, "Marie, with a reply");
-    const paulReply = comment(paul.id, "Paul replies", withReply);
-    const paulComment = comment(paul.id, "Paul");
-    const marieReply = comment(marie.id, "Marie replies", paulComment);
-    const ownThread = comment(marie.id, "Marie, only her own reply");
-    comment(marie.id, "Marie replies to herself", ownThread);
-
-    expect(deleteUser(db, superuser, marie.id)).toEqual({ ok: true });
-
-    const remaining = db.select().from(comments).all();
-    expect(remaining.map((c) => c.id).sort()).toEqual([withReply, paulReply, paulComment].sort());
-    expect(remaining.some((c) => c.id === alone || c.id === marieReply || c.id === ownThread)).toBe(false);
-
-    const placeholder = remaining.find((c) => c.id === withReply);
-    expect(placeholder).toMatchObject({ authorId: null, body: "" });
-    expect(placeholder?.deletedAt).toBeInstanceOf(Date);
-    // Paul's content is untouched.
-    expect(remaining.find((c) => c.id === paulReply)).toMatchObject({ authorId: paul.id, body: "Paul replies" });
   });
 });

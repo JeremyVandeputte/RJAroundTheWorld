@@ -118,8 +118,6 @@ async function main() {
     password: await askNewPassword(),
     role: "superuser",
     canPublish: true,
-    canComment: true,
-    canReact: true,
     canManageTrips: true,
   });
   if (!result.ok) fail(describe(result.reason));

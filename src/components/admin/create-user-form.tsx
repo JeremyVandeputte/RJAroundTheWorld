@@ -36,8 +36,6 @@ export function CreateUserForm() {
       />
       <fieldset>
         <legend className="text-sm font-medium">Permissions</legend>
-        <CheckboxField label="Commenter" name="canComment" defaultChecked />
-        <CheckboxField label="Réagir" name="canReact" defaultChecked />
         <CheckboxField label="Publier" name="canPublish" hint="Écrire des entrées dans les voyages qu'il peut voir." />
         <CheckboxField
           label="Gérer les voyages"

@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { SessionUser } from "@/server/auth/sessions";
 import type { Db } from "@/server/db/client";
-import { comments, entries, media, reactions, trips, users } from "@/server/db/schema";
+import { entries, media, trips, users } from "@/server/db/schema";
 import type { Actor } from "@/server/permissions";
 import {
   countTripEntries,
@@ -252,23 +252,18 @@ describe("deleting trips", () => {
     expect(exists(trip)).toBe(true);
   });
 
-  it("lets the creator delete their trip with all its entries, comments and reactions", () => {
+  it("lets the creator delete their trip with all its entries", () => {
     const trip = mustCreate(cast.manager);
     const other = mustCreate(cast.superuser, { title: "Autre" });
     const entry = addEntry(trip);
     addEntry(trip, "draft");
     const kept = addEntry(other);
-    const commentId = db.insert(comments).values({ entryId: entry.id, authorId: cast.guest.id, body: "Super" }).returning().get().id;
-    db.insert(reactions).values({ userId: cast.guest.id, entryId: entry.id, type: "love" }).run();
-    db.insert(reactions).values({ userId: cast.guest.id, commentId, type: "like" }).run();
     expect(countTripEntries(db, trip.id)).toBe(2);
 
     // The deleted entries are reported, so their media files can be removed from disk.
     expect(deleteTrip(db, cast.manager, trip.id)).toEqual({ ok: true, entryIds: [entry.id, entry.id + 1] });
 
     expect(exists(trip)).toBe(false);
-    expect(db.select().from(comments).all()).toHaveLength(0);
-    expect(db.select().from(reactions).all()).toHaveLength(0);
     // Other trips are untouched.
     expect(exists(other)).toBe(true);
     expect(db.select().from(entries).all().map((row) => row.id)).toEqual([kept.id]);

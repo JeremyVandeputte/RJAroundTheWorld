@@ -1,9 +1,9 @@
-import { and, asc, count, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
+import { asc, count, desc, eq, sql } from "drizzle-orm";
 import { generateTemporaryPassword } from "@/server/auth/password";
 import { clearFailedLogins } from "@/server/auth/rate-limit";
 import { deleteUserSessions, toSessionUser, type SessionUser } from "@/server/auth/sessions";
 import type { Db } from "@/server/db/client";
-import { comments, entries, media, users } from "@/server/db/schema";
+import { entries, media, users } from "@/server/db/schema";
 import { canManageUsers, type Actor } from "@/server/permissions";
 import { applyPasswordReset, createUser, type UserInputIssue } from "./users";
 
@@ -15,8 +15,6 @@ type TargetIssue = "forbidden" | "user_not_found" | "cannot_target_superuser";
 
 export type UserPermissions = {
   canPublish: boolean;
-  canComment: boolean;
-  canReact: boolean;
   canManageTrips: boolean;
 };
 
@@ -70,8 +68,6 @@ export async function adminCreateUser(db: Db, actor: Actor, input: AdminCreateUs
     password: temporaryPassword,
     role: "user",
     canPublish: input.canPublish,
-    canComment: input.canComment,
-    canReact: input.canReact,
     canManageTrips: input.canManageTrips,
     mustChangePassword: true,
   });
@@ -89,8 +85,6 @@ export function updateUserPermissions(
   db.update(users)
     .set({
       canPublish: permissions.canPublish,
-      canComment: permissions.canComment,
-      canReact: permissions.canReact,
       canManageTrips: permissions.canManageTrips,
     })
     .where(eq(users.id, userId))
@@ -132,9 +126,8 @@ export function forcePasswordChange(db: Db, actor: Actor, userId: number): { ok:
 }
 
 /**
- * Deletes an account with its comments and reactions. Comments that have
- * replies are kept as "deleted" placeholders so threads stay readable.
- * An account that wrote entries cannot be deleted: deactivate it instead.
+ * Deletes an account. An account that wrote entries (or sent files) cannot
+ * be deleted: deactivate it instead.
  */
 export function deleteUser(db: Db, actor: Actor, userId: number): { ok: true } | Refused<TargetIssue | "has_entries"> {
   const target = findTarget(db, actor, userId);
@@ -145,19 +138,8 @@ export function deleteUser(db: Db, actor: Actor, userId: number): { ok: true } |
   if ((authored?.total ?? 0) > 0 || (uploaded?.total ?? 0) > 0) return { ok: false, reason: "has_entries" };
 
   db.transaction((tx) => {
-    // Replies never have replies of their own: remove them first.
-    tx.delete(comments).where(and(eq(comments.authorId, userId), isNotNull(comments.parentId))).run();
-
-    const hasReplies = sql`exists (select 1 from comments as reply where reply.parent_id = comments.id)`;
-    tx.update(comments)
-      .set({ body: "", deletedAt: new Date() })
-      .where(and(eq(comments.authorId, userId), isNull(comments.deletedAt), hasReplies))
-      .run();
-    tx.delete(comments).where(and(eq(comments.authorId, userId), sql`not ${hasReplies}`)).run();
-
     clearFailedLogins(tx as unknown as Db, target.user.username);
-    // Cascades: sessions, reactions, notifications, tags in entries.
-    // Remaining placeholder comments keep their row with a null author.
+    // Cascades: sessions, notifications, identifications in entries.
     tx.delete(users).where(eq(users.id, userId)).run();
   });
   return { ok: true };

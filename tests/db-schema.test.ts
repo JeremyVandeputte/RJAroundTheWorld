@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Db } from "@/server/db/client";
-import { comments, entries, reactions, trips, users } from "@/server/db/schema";
+import { entries, entryPeople, trips, users } from "@/server/db/schema";
 import { createTestDb } from "./helpers/test-db";
 
 let db: Db;
@@ -28,13 +28,12 @@ beforeEach(() => {
 });
 
 describe("database schema", () => {
-  it("applies account defaults: comment and react on, publish off", () => {
+  it("applies account defaults: read only", () => {
     const user = db.select().from(users).where(eq(users.id, userId)).get();
     expect(user).toMatchObject({
       role: "user",
       canPublish: false,
-      canComment: true,
-      canReact: true,
+      canManageTrips: false,
       mustChangePassword: false,
       isActive: true,
     });
@@ -51,30 +50,8 @@ describe("database schema", () => {
     ).toThrow(/UNIQUE/);
   });
 
-  it("allows a single reaction per user and per entry", () => {
-    db.insert(reactions).values({ userId, entryId, type: "like" }).run();
-    expect(() => db.insert(reactions).values({ userId, entryId, type: "love" }).run()).toThrow(/UNIQUE/);
-  });
-
-  it("allows a single reaction per user and per comment", () => {
-    const commentId = db.insert(comments).values({ entryId, authorId: userId, body: "Nice" }).returning().get().id;
-    db.insert(reactions).values({ userId, commentId, type: "haha" }).run();
-    expect(() => db.insert(reactions).values({ userId, commentId, type: "wow" }).run()).toThrow(/UNIQUE/);
-    // Reacting to the entry itself is a separate target.
-    db.insert(reactions).values({ userId, entryId, type: "like" }).run();
-    expect(db.select().from(reactions).all()).toHaveLength(2);
-  });
-
-  it("requires a reaction to target exactly one element", () => {
-    expect(() => db.insert(reactions).values({ userId, type: "like" }).run()).toThrow(/CHECK/);
-    const commentId = db.insert(comments).values({ entryId, authorId: userId, body: "Nice" }).returning().get().id;
-    expect(() => db.insert(reactions).values({ userId, entryId, commentId, type: "like" }).run()).toThrow(/CHECK/);
-  });
-
   it("enforces foreign keys", () => {
-    expect(() => db.insert(comments).values({ entryId: 9999, authorId: userId, body: "x" }).run()).toThrow(
-      /FOREIGN KEY/,
-    );
+    expect(() => db.insert(entryPeople).values({ entryId: 9999, userId }).run()).toThrow(/FOREIGN KEY/);
   });
 
   it("rejects incomplete or inconsistent location points", () => {
@@ -86,22 +63,6 @@ describe("database schema", () => {
     update({ pointALat: 14.6, pointALng: -61.0, pointAName: "Fort-de-France" });
     update({ pointBLat: 14.8, pointBLng: -61.1 });
     expect(db.select().from(entries).get()).toMatchObject({ pointALat: 14.6, pointBLng: -61.1 });
-  });
-
-  it("removes comments, replies and reactions with their entry", () => {
-    const parentId = db.insert(comments).values({ entryId, authorId: userId, body: "Parent" }).returning().get().id;
-    const replyId = db
-      .insert(comments)
-      .values({ entryId, parentId, authorId: userId, body: "Reply" })
-      .returning()
-      .get().id;
-    db.insert(reactions).values({ userId, commentId: replyId, type: "love" }).run();
-    db.insert(reactions).values({ userId, entryId, type: "like" }).run();
-
-    db.delete(entries).where(eq(entries.id, entryId)).run();
-
-    expect(db.select().from(comments).all()).toHaveLength(0);
-    expect(db.select().from(reactions).all()).toHaveLength(0);
   });
 
   it("refuses to delete a user who authored entries", () => {

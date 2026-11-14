@@ -13,7 +13,7 @@ export function DeleteEntryForm({ entryId }: { entryId: number }) {
     <details>
       <summary className="min-h-11 cursor-pointer py-2 text-red-800">Supprimer cette entrée…</summary>
       <p className="mt-2 mb-3 text-sm text-muted">
-        L&apos;entrée sera supprimée définitivement, avec ses commentaires et ses réactions.
+        L&apos;entrée sera supprimée définitivement, avec ses photos et vidéos.
       </p>
       <form action={formAction} className="space-y-3">
         <input type="hidden" name="entryId" value={entryId} />

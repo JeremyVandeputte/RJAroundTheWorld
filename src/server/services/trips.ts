@@ -150,7 +150,7 @@ export function updateTrip(db: Db, actor: Actor, tripId: number, input: TripInpu
 }
 
 /**
- * Deletes a trip together with all its entries, their comments and reactions.
+ * Deletes a trip together with all its entries.
  * Returns the ids of the deleted entries: their media files must be removed from disk.
  */
 export function deleteTrip(
@@ -162,7 +162,7 @@ export function deleteTrip(
   if (!found.ok) return found;
 
   const entryIds = db.transaction((tx) => {
-    // Comments, reactions, media rows, notifications and tags go with their entry.
+    // Media rows, notifications and tags go with their entry.
     const deleted = tx.delete(entries).where(eq(entries.tripId, tripId)).returning({ id: entries.id }).all();
     tx.delete(trips).where(eq(trips.id, tripId)).run();
     return deleted.map((entry) => entry.id);

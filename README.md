@@ -1,6 +1,6 @@
 # RJ Around The World
 
-Journal de voyage privé, pour raconter nos voyages à nos proches : entrées datées avec texte, photos, vidéos et lieu sur une carte, commentaires, réactions et notifications.
+Journal de voyage privé, pour raconter nos voyages à nos proches : entrées datées avec texte, photos, vidéos et lieu sur une carte, et notifications.
 
 Le site n'est accessible que par un **lien secret**, puis **avec un compte** : rien n'est lisible sans être connecté. Il n'est jamais indexé par les moteurs de recherche. Il est pensé pour un usage sur téléphone, y compris avec une connexion instable.
 
@@ -89,11 +89,11 @@ Le site ne répond qu'aux navigateurs qui ont ouvert le lien secret au moins une
 Pas d'inscription libre : seuls le script `create-superuser` et la page « Administration » (réservée au superuser) créent des comptes. Cette page permet de :
 
 - **créer un compte** : identifiant, nom affiché et permissions. Un mot de passe temporaire est généré et affiché une seule fois ; la personne doit choisir le sien dès sa première connexion ;
-- **régler les permissions** de chaque compte, une par une : Commenter et Réagir (activées par défaut), Publier et Gérer les voyages (désactivées par défaut) ;
+- **régler les permissions** de chaque compte : Publier et Gérer les voyages (désactivées par défaut : un nouveau compte peut seulement lire) ;
 - **réinitialiser un mot de passe oublié** : nouveau mot de passe temporaire affiché une seule fois, sessions du compte fermées, blocage de connexion levé ;
 - **forcer un changement de mot de passe** sans toucher au mot de passe actuel ;
 - **désactiver ou réactiver** un compte : un compte désactivé est déconnecté partout et ne peut plus se connecter ;
-- **supprimer** un compte : ses commentaires et réactions sont supprimés (un commentaire qui a des réponses devient « Commentaire supprimé »). Un compte qui a écrit des entrées ne peut pas être supprimé : il faut le désactiver ;
+- **supprimer** un compte. Un compte qui a écrit des entrées ne peut pas être supprimé : il faut le désactiver ;
 - **gérer les tags** : en créer, les renommer (partout où ils sont utilisés) ou les supprimer (ils sont retirés des entrées).
 
 Le compte superuser ne peut être ni désactivé, ni supprimé, ni réinitialisé depuis cette page : son mot de passe se change dans « Mon profil » ou avec `npm run create-superuser`.
@@ -109,17 +109,13 @@ Toutes les règles d'accès sont dans un seul fichier, `src/server/permissions.t
 | Voir un brouillon | son auteur | oui |
 | Créer une entrée | si Publier | oui |
 | Modifier, retirer ou supprimer une entrée | les siennes, si Publier | oui |
-| Voir les commentaires et réactions | oui | oui |
-| Commenter, répondre | si Commenter | oui |
-| Modifier ou supprimer un commentaire | les siens, si Commenter | oui |
-| Réagir | si Réagir | oui |
 | Créer un voyage | si Gérer les voyages | oui |
 | Modifier, masquer ou supprimer un voyage | les siens, si Gérer les voyages | oui |
 | Gérer les comptes | non | oui |
 
 Sans compte, rien n'est accessible : seule la page de connexion répond.
 
-Tout ce qui concerne les entrées, commentaires et réactions ne vaut que dans les voyages que la personne peut voir. Les quatre permissions sont indépendantes : pour préparer un voyage masqué et y écrire, il faut Gérer les voyages (pour le créer) et Publier (pour y écrire). Un compte désactivé, ou qui doit d'abord changer son mot de passe, n'a accès à rien d'autre que sa page de profil.
+Tout ce qui concerne les entrées ne vaut que dans les voyages que la personne peut voir. Les deux permissions sont indépendantes : pour préparer un voyage masqué et y écrire, il faut Gérer les voyages (pour le créer) et Publier (pour y écrire). Un compte désactivé, ou qui doit d'abord changer son mot de passe, n'a accès à rien d'autre que sa page de profil.
 
 ### Voyages
 
@@ -128,7 +124,7 @@ Tout ce qui concerne les entrées, commentaires et réactions ne vaut que dans l
 - **Miniature du voyage** : une photo envoyée pour le voyage, ou une des photos de ses entrées. Elle s'affiche sur l'accueil et en tête du journal. **Elle est obligatoire pour rendre le voyage visible** ; un voyage déjà visible qui perd sa miniature (photo supprimée) reste visible, avec un fond neutre.
 - Tant qu'un voyage est non visible, lui et ses entrées, même publiées, n'existent que pour son auteur et le superuser : pour tous les autres, ses adresses répondent 404, comme s'il n'existait pas. Cela vaut aussi pour quelqu'un qui y avait écrit avant qu'il ne soit masqué.
 - Cocher « Voyage visible » le révèle d'un coup avec toutes ses entrées publiées.
-- Seuls l'auteur du voyage (s'il a toujours Gérer les voyages) et le superuser peuvent le modifier, changer sa visibilité ou le supprimer. La suppression emporte toutes ses entrées, y compris celles écrites par d'autres, avec leurs photos, commentaires et réactions.
+- Seuls l'auteur du voyage (s'il a toujours Gérer les voyages) et le superuser peuvent le modifier, changer sa visibilité ou le supprimer. La suppression emporte toutes ses entrées, y compris celles écrites par d'autres, avec leurs photos et vidéos.
 - Si le compte de l'auteur est supprimé, le voyage reste et seul le superuser peut le gérer.
 - L'adresse d'un voyage est construite à partir de son titre à la création et ne change plus ensuite.
 
@@ -147,11 +143,11 @@ Tout ce qui concerne les entrées, commentaires et réactions ne vaut que dans l
 
 Réservé aux personnes qui gèrent le voyage (son auteur, tant qu'il a « Gérer les voyages », et le superuser) : les autres ne voient pas le lien. Sur la page du voyage, « Télécharger (ZIP) », dans le bandeau « Gestion du voyage », produit une archive `<voyage>.zip` contenant :
 
-- `index.html` : tout le voyage sur une seule page, lisible hors ligne dans n'importe quel navigateur (miniature, entrées de la plus ancienne à la plus récente, texte, lieux, personnes, tags, photos, vidéos et commentaires). Elle ne contacte aucun serveur ; les lieux sont des liens vers OpenStreetMap, ouverts seulement si on les touche. Pour un PDF, ouvrir cette page et choisir « Imprimer » puis « Enregistrer au format PDF » (les vidéos sont alors omises).
+- `index.html` : tout le voyage sur une seule page, lisible hors ligne dans n'importe quel navigateur (miniature, entrées de la plus ancienne à la plus récente, texte, lieux, personnes, tags, photos et vidéos). Elle ne contacte aucun serveur ; les lieux sont des liens vers OpenStreetMap, ouverts seulement si on les touche. Pour un PDF, ouvrir cette page et choisir « Imprimer » puis « Enregistrer au format PDF » (les vidéos sont alors omises).
 - `media/` : les photos et vidéos telles qu'elles sont stockées sur le site, avec des noms lisibles (`2026-11-11-plage-des-salines.jpg`).
 - `journal.json` : le même contenu sous forme de données.
 
-L'archive contient les entrées publiées (jamais les brouillons) et leurs commentaires. L'archive est produite au fil du téléchargement, sans être construite d'abord sur le serveur ; les fichiers n'étant pas recompressés, elle pèse à peu près le poids des photos et vidéos du voyage. Au-delà de 4 Go, le format ZIP64 est utilisé (lu par Windows, macOS, Linux et 7-Zip).
+L'archive contient les entrées publiées (jamais les brouillons). L'archive est produite au fil du téléchargement, sans être construite d'abord sur le serveur ; les fichiers n'étant pas recompressés, elle pèse à peu près le poids des photos et vidéos du voyage. Au-delà de 4 Go, le format ZIP64 est utilisé (lu par Windows, macOS, Linux et 7-Zip).
 
 ### Filtres
 
@@ -190,18 +186,7 @@ La carte utilise Leaflet (inclus dans le site, aucun CDN) et les fonds de carte 
 ### Recherche et statistiques
 
 - **Recherche** : champ en haut de l'accueil (page `/search`). Cherche dans les titres, les textes, les noms de lieux, les tags, le nom du voyage, l'auteur et les personnes identifiées. Majuscules et accents sont ignorés (« foret » trouve « Forêt ») et tous les mots doivent être présents. Les mots trouvés sont surlignés, avec un extrait du texte. Les 50 entrées les plus récentes sont affichées. On ne trouve que ce que l'on peut déjà voir : entrées publiées des voyages visibles, plus ses propres brouillons (le superuser voit tout).
-- **Statistiques** : bouton « Statistiques » sur l'accueil (page `/stats`). Nombre de voyages, d'entrées, de jours racontés, de photos, de vidéos et de commentaires, longueur des trajets A → B (à vol d'oiseau), un tableau par voyage, les tags les plus utilisés, les personnes les plus présentes et qui écrit le plus. Seules les entrées publiées des voyages que l'on peut voir sont comptées.
-
-### Commentaires et réactions
-
-En bas de la page d'une entrée publiée, visibles par toutes les personnes qui peuvent voir l'entrée.
-
-- **Commenter** (permission Commenter) : texte simple, 2 000 caractères au maximum, sauts de ligne conservés.
-- **Répondre** : un seul niveau ; répondre à une réponse la place sous le même commentaire de départ.
-- **Modifier, supprimer** : chacun ses propres commentaires (mention « modifié ») ; le superuser, tous. L'auteur d'une entrée ne peut pas supprimer les commentaires des autres.
-- Un commentaire supprimé qui a des réponses devient « Commentaire supprimé » (son texte et ses réactions sont réellement effacés) pour ne pas casser le fil ; cet emplacement disparaît avec sa dernière réponse.
-- **Réactions** (permission Réagir) : J'aime 👍, J'adore ❤️, Haha 😆, Wouah 😮, Triste 😢, En colère 😡, sur l'entrée et sur chaque commentaire ou réponse. Une seule par personne et par élément : en choisir une autre la remplace, retoucher la sienne la retire. « Voir qui a réagi » donne la liste.
-- Les heures s'affichent dans le fuseau de l'appareil qui consulte.
+- **Statistiques** : bouton « Statistiques » sur l'accueil (page `/stats`). Nombre de voyages, d'entrées, de jours racontés, de photos et de vidéos, longueur des trajets A → B (à vol d'oiseau), un tableau par voyage, les tags les plus utilisés, les personnes les plus présentes et qui écrit le plus. Seules les entrées publiées des voyages que l'on peut voir sont comptées.
 
 ### Notifications
 
@@ -211,20 +196,17 @@ La cloche de l'en-tête indique le nombre de notifications non lues et mène à 
 |---|---|
 | Première publication d'une entrée | Toutes les personnes qui peuvent la voir, sauf son auteur ; mention « Vous apparaissez dans cette entrée » pour les personnes identifiées |
 | Personne identifiée après la publication (ou pendant que l'entrée était retirée) | Cette personne, une seule fois |
-| Commentaire ou réaction sur une entrée | L'auteur de l'entrée et les personnes identifiées |
-| Réponse à un commentaire (ou à une réponse) | L'auteur du commentaire auquel on répond |
-| Réaction à un commentaire ou à une réponse | Son auteur |
 | Voyage rendu visible (ou créé directement visible) | Toutes les personnes qui peuvent désormais le voir, une seule fois par voyage |
 
 - Jamais à soi-même, et rien sur un voyage masqué pour qui n'y a pas accès.
-- Pas de doublon : retirer puis republier une entrée ne renotifie pas ; changer de réaction met à jour la notification ; retirer sa réaction la supprime.
-- Une notification disparaît si son objet n'est plus visible (voyage masqué, entrée retirée, commentaire supprimé, personne retirée de l'entrée) et réapparaît s'il le redevient.
-- Toucher une notification mène à l'entrée ou au commentaire concerné et la marque comme lue. « Marquer comme lue » et « Tout marquer comme lu » marquent sans quitter la page. Les 100 plus récentes sont affichées.
+- Pas de doublon : retirer puis republier une entrée ne renotifie pas.
+- Une notification disparaît si son objet n'est plus visible (voyage masqué, entrée retirée, personne retirée de l'entrée) et réapparaît s'il le redevient.
+- Toucher une notification mène à l'entrée ou au voyage concerné et la marque comme lue. « Marquer comme lue » et « Tout marquer comme lu » marquent sans quitter la page. Les 100 plus récentes sont affichées.
 
 ### Connexion instable
 
 - **Envoi de photos et vidéos** : par morceaux de 4 Mo. Après une coupure courte, le morceau en cours est renvoyé automatiquement (4 nouvelles tentatives). Après une coupure plus longue, l'envoi s'arrête avec un message, et « Reprendre l'envoi » repart d'où il s'était arrêté tant que la page reste ouverte.
-- **Formulaires** (entrée, commentaire…) envoyés sans réseau : un message « Connexion interrompue » s'affiche et tout ce qui a été saisi reste en place.
+- **Formulaires** (entrée, voyage…) envoyés sans réseau : un message « Connexion interrompue » s'affiche et tout ce qui a été saisi reste en place.
 - **Brouillon local d'une entrée** : pendant la rédaction (nouvelle entrée ou modification), ce qui est saisi est copié toutes les 2 secondes dans le navigateur de l'appareil, ainsi qu'au moment où l'on quitte l'application ou la page. Si la page est fermée, rechargée ou perdue avant l'enregistrement, la rouvrir affiche « Des modifications non enregistrées du … ont été retrouvées sur cet appareil », avec **Reprendre ces modifications** ou **Les ignorer**. Sont conservés : date, titre, texte, personnes, tags (y compris les nouveaux) et lieu ; pas les photos, qui s'envoient séparément. La copie est supprimée dès que l'entrée est enregistrée, et n'est pas proposée si elle est identique à ce qui est enregistré. Elle est propre à chaque compte, voyage et entrée, et ne quitte jamais l'appareil.
 - **Page ouverte sans connexion** : une page « Pas de connexion » remplace l'erreur du navigateur (voir « Installer l'application »).
 - **Erreur du serveur** : le message le dit, au lieu de parler de coupure, et invite à recharger la page pour vérifier si l'action a été enregistrée.
@@ -368,7 +350,6 @@ Les tests (Vitest) utilisent une base SQLite en mémoire avec les vraies migrati
 - **l'authentification** : lien secret, sessions, mots de passe, anti brute force, CSRF ;
 - **la visibilité** : voyages masqués, brouillons, carte ;
 - **l'accès aux médias** : envoi par morceaux, quotas, formats, droits ;
-- **les commentaires et réactions** ;
 - **les notifications** : destinataires, doublons, visibilité ;
 - **la sécurité** : rendu du texte contre le XSS, en-têtes.
 

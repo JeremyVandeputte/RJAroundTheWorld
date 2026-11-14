@@ -71,7 +71,6 @@ export default async function StatsPage() {
             <Tile value={number.format(totals.days)} label={totals.days > 1 ? "jours racontés" : "jour raconté"} />
             <Tile value={number.format(totals.photos)} label={totals.photos > 1 ? "photos" : "photo"} />
             <Tile value={number.format(totals.videos)} label={totals.videos > 1 ? "vidéos" : "vidéo"} />
-            <Tile value={number.format(totals.comments)} label={totals.comments > 1 ? "commentaires" : "commentaire"} />
             {totals.routeKm > 0 ? <Tile value={km(totals.routeKm)} label="de trajets, à vol d'oiseau" /> : null}
           </dl>
 
@@ -99,11 +98,6 @@ export default async function StatsPage() {
                       Vidéos
                     </th>
                     <th scope="col" className="px-3 py-2 text-right font-medium">
-                      <abbr title="Commentaires" className="no-underline">
-                        Comm.
-                      </abbr>
-                    </th>
-                    <th scope="col" className="px-3 py-2 text-right font-medium">
                       Trajets
                     </th>
                   </tr>
@@ -125,7 +119,6 @@ export default async function StatsPage() {
                       <td className="px-3 py-2 text-right">{number.format(row.days)}</td>
                       <td className="px-3 py-2 text-right">{number.format(row.photos)}</td>
                       <td className="px-3 py-2 text-right">{number.format(row.videos)}</td>
-                      <td className="px-3 py-2 text-right">{number.format(row.comments)}</td>
                       <td className="px-3 py-2 text-right whitespace-nowrap">{row.routeKm > 0 ? km(row.routeKm) : "–"}</td>
                     </tr>
                   ))}

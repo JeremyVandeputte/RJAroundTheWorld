@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { LocalDateTime } from "@/components/social/local-date-time";
+import { LocalDateTime } from "@/components/ui/local-date-time";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { describeNotification } from "@/lib/notification-text";
 import {
@@ -49,9 +49,6 @@ export default async function NotificationsPage() {
                       {describeNotification(notification)}
                     </span>
                   </span>
-                  {notification.excerpt ? (
-                    <span className="mt-1 block text-sm break-words text-muted">« {notification.excerpt} »</span>
-                  ) : null}
                   <span className="mt-1 block text-xs text-muted">
                     <LocalDateTime iso={notification.createdAt.toISOString()} />
                   </span>

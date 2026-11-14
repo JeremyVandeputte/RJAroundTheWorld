@@ -57,6 +57,13 @@
       "when": 1794596922030,
       "tag": "0007_video_processing",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1794615370168,
+      "tag": "0008_remove_comments_reactions",
+      "breakpoints": true
     }
   ]
 }

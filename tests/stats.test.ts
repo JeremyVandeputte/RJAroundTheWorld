@@ -3,7 +3,6 @@ import { distanceKm } from "@/lib/geo";
 import type { Db } from "@/server/db/client";
 import { media } from "@/server/db/schema";
 import type { Actor } from "@/server/permissions";
-import { addComment, deleteComment } from "@/server/services/comments";
 import { createEntry, type Entry } from "@/server/services/entries";
 import { journalStats } from "@/server/services/stats";
 import type { Trip } from "@/server/services/trips";
@@ -50,7 +49,7 @@ describe("distanceKm", () => {
 });
 
 describe("journal statistics", () => {
-  it("count published entries, days, media, comments and routes per trip", () => {
+  it("count published entries, days, media and routes per trip", () => {
     const plage = entry("publish", { title: "Plage", date: "2026-11-11", newTags: ["Plage"] });
     const rando = entry("publish", {
       title: "Rando",
@@ -66,16 +65,12 @@ describe("journal statistics", () => {
     addMedia(plage, "photo");
     addMedia(rando, "video");
     addMedia(draft, "photo");
-    const comment = addComment(db, cast.guest, plage.id, { body: "Superbe", replyToId: null });
-    addComment(db, cast.guest, rando.id, { body: "Bravo", replyToId: null });
-    if (!comment.ok) throw new Error(comment.reason);
-    deleteComment(db, cast.guest, comment.comment.id);
 
     const stats = journalStats(db, cast.guest);
     expect(stats.trips).toHaveLength(1);
-    expect(stats.trips[0]).toMatchObject({ entries: 3, days: 2, photos: 2, videos: 1, comments: 1 });
+    expect(stats.trips[0]).toMatchObject({ entries: 3, days: 2, photos: 2, videos: 1 });
     expect(stats.trips[0]!.routeKm).toBeCloseTo(11.1, 0);
-    expect(stats.totals).toMatchObject({ trips: 1, entries: 3, days: 2, photos: 2, videos: 1, comments: 1 });
+    expect(stats.totals).toMatchObject({ trips: 1, entries: 3, days: 2, photos: 2, videos: 1 });
 
     expect(stats.tags.map((tag) => [tag.name, tag.count])).toEqual([
       ["plage", 2],
@@ -104,7 +99,7 @@ describe("journal statistics", () => {
   it("list a trip without published entries with zeros", () => {
     entry("save");
     const stats = journalStats(db, cast.publisher);
-    expect(stats.trips[0]).toMatchObject({ entries: 0, days: 0, photos: 0, videos: 0, comments: 0, routeKm: 0 });
+    expect(stats.trips[0]).toMatchObject({ entries: 0, days: 0, photos: 0, videos: 0, routeKm: 0 });
     expect(stats.tags).toEqual([]);
     expect(stats.authors).toEqual([]);
   });

@@ -14,13 +14,8 @@ import {
 export const USER_ROLES = ["superuser", "user"] as const;
 export const ENTRY_STATUSES = ["draft", "published"] as const;
 export const MEDIA_KINDS = ["photo", "video"] as const;
-export const REACTION_TYPES = ["like", "love", "haha", "wow", "sad", "angry"] as const;
 export const NOTIFICATION_TYPES = [
   "entry_published",
-  "entry_comment",
-  "entry_reaction",
-  "comment_reply",
-  "comment_reaction",
   "entry_tagged",
   "trip_revealed",
 ] as const;
@@ -28,7 +23,6 @@ export const NOTIFICATION_TYPES = [
 export type UserRole = (typeof USER_ROLES)[number];
 export type EntryStatus = (typeof ENTRY_STATUSES)[number];
 export type MediaKind = (typeof MEDIA_KINDS)[number];
-export type ReactionType = (typeof REACTION_TYPES)[number];
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
 const id = () => integer("id").primaryKey({ autoIncrement: true });
@@ -45,8 +39,6 @@ export const users = sqliteTable("users", {
   passwordHash: text("password_hash").notNull(),
   role: text("role", { enum: USER_ROLES }).notNull().default("user"),
   canPublish: integer("can_publish", { mode: "boolean" }).notNull().default(false),
-  canComment: integer("can_comment", { mode: "boolean" }).notNull().default(true),
-  canReact: integer("can_react", { mode: "boolean" }).notNull().default(true),
   /** Create trips, then edit, hide or delete the ones this user created. */
   canManageTrips: integer("can_manage_trips", { mode: "boolean" }).notNull().default(false),
   mustChangePassword: integer("must_change_password", { mode: "boolean" }).notNull().default(false),
@@ -230,53 +222,6 @@ export const media = sqliteTable(
   ],
 );
 
-export const comments = sqliteTable(
-  "comments",
-  {
-    id: id(),
-    entryId: integer("entry_id")
-      .notNull()
-      .references(() => entries.id, { onDelete: "cascade" }),
-    /** Top-level comment this reply belongs to (single nesting level). */
-    parentId: integer("parent_id").references((): AnySQLiteColumn => comments.id, {
-      onDelete: "cascade",
-    }),
-    /** Null once the author's account has been deleted. */
-    authorId: integer("author_id").references(() => users.id, { onDelete: "set null" }),
-    body: text("body").notNull(),
-    createdAt: createdAt(),
-    editedAt: integer("edited_at", { mode: "timestamp_ms" }),
-    /** Soft delete: keeps the thread intact when a comment has replies. */
-    deletedAt: integer("deleted_at", { mode: "timestamp_ms" }),
-  },
-  (t) => [index("comments_entry_idx").on(t.entryId, t.createdAt), index("comments_parent_idx").on(t.parentId)],
-);
-
-/** One reaction per user and per target (an entry or a comment). */
-export const reactions = sqliteTable(
-  "reactions",
-  {
-    id: id(),
-    userId: integer("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    entryId: integer("entry_id").references(() => entries.id, { onDelete: "cascade" }),
-    commentId: integer("comment_id").references(() => comments.id, { onDelete: "cascade" }),
-    type: text("type", { enum: REACTION_TYPES }).notNull(),
-    createdAt: createdAt(),
-  },
-  (t) => [
-    uniqueIndex("reactions_user_entry_unique").on(t.userId, t.entryId),
-    uniqueIndex("reactions_user_comment_unique").on(t.userId, t.commentId),
-    index("reactions_entry_idx").on(t.entryId),
-    index("reactions_comment_idx").on(t.commentId),
-    check(
-      "reactions_single_target",
-      sql`(${t.entryId} is null) <> (${t.commentId} is null)`,
-    ),
-  ],
-);
-
 export const notifications = sqliteTable(
   "notifications",
   {
@@ -294,11 +239,8 @@ export const notifications = sqliteTable(
       .references(() => trips.id, { onDelete: "cascade" }),
     /** The entry concerned: set for every type except `trip_revealed`. */
     entryId: integer("entry_id").references(() => entries.id, { onDelete: "cascade" }),
-    commentId: integer("comment_id").references(() => comments.id, { onDelete: "cascade" }),
     /** The recipient is identified in the entry (and is not its author). */
     isTagged: integer("is_tagged", { mode: "boolean" }).notNull().default(false),
-    /** For reaction notifications: the reaction given (kept up to date when it changes). */
-    reactionType: text("reaction_type", { enum: REACTION_TYPES }),
     readAt: integer("read_at", { mode: "timestamp_ms" }),
     createdAt: createdAt(),
   },

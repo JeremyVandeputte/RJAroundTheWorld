@@ -21,8 +21,7 @@ describe("account creation", () => {
       displayName: "Marie",
       role: "user",
       canPublish: false,
-      canComment: true,
-      canReact: true,
+      canManageTrips: false,
       mustChangePassword: false,
       isActive: true,
     });
