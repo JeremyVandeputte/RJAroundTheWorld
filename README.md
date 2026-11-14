@@ -281,6 +281,8 @@ Si le téléphone n'atteint pas le site, le pare-feu de l'ordinateur bloque prob
 
 ## Mise en production
 
+> **Guide pas à pas détaillé** (VPS Ubuntu, envoi du code, HTTPS avec Caddy, service systemd, sauvegardes, mises à jour, dépannage) : [docs/mise-en-production.md](docs/mise-en-production.md). Ce qui suit en est le résumé.
+
 Le site a besoin d'un serveur qui tourne en continu, avec un disque persistant pour la base et les fichiers : un VPS ou un NAS convient, une plateforme « serverless » non.
 
 1. **Préparer le serveur** : Node.js 22.12 ou plus récent ; ffmpeg en option pour convertir les vidéos (`apt install ffmpeg` sur Debian/Ubuntu, puis `FFMPEG_PATH=/usr/bin/ffmpeg`). Les dossiers de `DATABASE_PATH` et `MEDIA_DIR` doivent être sur un disque persistant et sauvegardé.
@@ -372,6 +374,7 @@ Les tests (Vitest) utilisent une base SQLite en mémoire avec les vraies migrati
 
 ```
 drizzle/                  migrations SQL
+docs/                     guide de mise en production
 scripts/                  scripts en ligne de commande (superuser, sauvegarde, migrations, icônes)
 public/                   icônes de l'application et service worker (sw.js)
 src/proxy.ts              contrôle d'accès et en-têtes appliqués à chaque requête
