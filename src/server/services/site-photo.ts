@@ -3,7 +3,8 @@
 //
 // Three square versions are kept (the original is not):
 // - "nav": 96 px, shown at 32 px in the header (sharp on high-density screens);
-// - "icon": 64 px, the tab icon;
+// - "icon": 64 px, the tab icon, cut into a disc (transparent corners), as
+//   in the header;
 // - "large": 480 px, centred on the "À propos" page.
 // The version (time of the last change) is part of their address, so a new
 // photo is never hidden by a browser cache.
@@ -48,6 +49,14 @@ export function sitePhotoUrl(version: number | null, size: SitePhotoSize): strin
   return version === null ? null : `/api/site-photo?size=${size}&v=${version}`;
 }
 
+/** White disc on a transparent square: keeps only the inside of the circle. */
+function discMask(pixels: number): Buffer {
+  const radius = pixels / 2;
+  return Buffer.from(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${pixels}" height="${pixels}"><circle cx="${radius}" cy="${radius}" r="${radius}" fill="#fff"/></svg>`,
+  );
+}
+
 /** Replaces the site photo by this image. */
 export async function saveSitePhoto(db: Db, actor: Actor, mediaDir: string, bytes: Uint8Array, now = new Date()): Promise<SitePhotoResult> {
   if (!canManageJournal(actor)) return { ok: false, reason: "forbidden" };
@@ -67,7 +76,10 @@ export async function saveSitePhoto(db: Db, actor: Actor, mediaDir: string, byte
     const target = sitePhotoPath(mediaDir, size);
     const temporary = `${target}.tmp`;
     // Upright, cut to a centred square; transparency is kept (a logo may have some).
-    await sharp(bytes).rotate().resize(pixels, pixels, { fit: "cover", position: "attention" }).png().toFile(temporary);
+    let image = sharp(bytes).rotate().resize(pixels, pixels, { fit: "cover", position: "attention" });
+    // The header rounds its photo with CSS; a tab icon cannot be styled, so it is cut here.
+    if (size === "icon") image = sharp(await image.png().toBuffer()).composite([{ input: discMask(pixels), blend: "dest-in" }]);
+    await image.png().toFile(temporary);
     await fs.rename(temporary, target);
   }
 

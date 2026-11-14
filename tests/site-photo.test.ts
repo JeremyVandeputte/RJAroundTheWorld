@@ -43,6 +43,20 @@ describe("site photo", () => {
     }
   });
 
+  it("cuts the tab icon into a disc with transparent corners, and only the tab icon", async () => {
+    await saveSitePhoto(db, cast.superuser, config.mediaDir, await samplePhoto({ width: 800, height: 600 }));
+    const alphaAt = async (size: "icon" | "nav", x: number, y: number) => {
+      const { data, info } = await sharp(sitePhotoPath(config.mediaDir, size)).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+      return data[(y * info.width + x) * info.channels + 3];
+    };
+    expect(await alphaAt("icon", 0, 0)).toBe(0);
+    expect(await alphaAt("icon", 63, 63)).toBe(0);
+    expect(await alphaAt("icon", 32, 32)).toBe(255);
+    expect(await alphaAt("icon", 32, 1)).toBeGreaterThan(200);
+    // The header photo stays square: CSS rounds it.
+    expect(await alphaAt("nav", 0, 0)).toBe(255);
+  });
+
   it("replaces the previous photo with a new version", async () => {
     await saveSitePhoto(db, cast.superuser, config.mediaDir, await samplePhoto({ width: 400, height: 400 }), new Date(1000));
     await saveSitePhoto(db, cast.superuser, config.mediaDir, await samplePhoto({ width: 300, height: 600, format: "png" }), new Date(2000));

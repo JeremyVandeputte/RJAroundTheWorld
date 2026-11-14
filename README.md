@@ -95,7 +95,7 @@ Pas d'inscription libre : seuls le script `create-superuser` et la page « Admin
 - **désactiver ou réactiver** un compte : un compte désactivé est déconnecté partout et ne peut plus se connecter ;
 - **supprimer** un compte. Un compte qui a écrit des entrées ne peut pas être supprimé : il faut le désactiver ;
 - **gérer les tags** : en créer, les renommer (partout où ils sont utilisés) ou les supprimer (ils sont retirés des entrées) ;
-- **choisir la photo du site** : affichée dans un rond à gauche de « RJ Around The World » en haut de chaque page (page de connexion comprise), comme icône de l'onglet du navigateur et en grand sur la page « À propos ». Elle est recadrée en carré au centre ; JPEG, PNG ou WebP, 8 Mo au maximum. « Retirer la photo » revient au nom seul et à l'icône « RJ ». L'icône de l'application installée sur un téléphone reste l'icône « RJ ».
+- **choisir la photo du site** : affichée dans un rond à gauche de « RJ Around The World » en haut de chaque page (page de connexion comprise), comme icône de l'onglet du navigateur (découpée en rond, coins transparents) et en grand sur la page « À propos ». Elle est recadrée en carré au centre ; JPEG, PNG ou WebP, 8 Mo au maximum. « Retirer la photo » revient au nom seul et à l'icône « RJ ». L'icône de l'application installée sur un téléphone reste l'icône « RJ ».
 
 Les comptes qui ont **à la fois Publier et Gérer les voyages** ont aussi accès à « Administration », mais seulement pour les tags et la photo du site : ni les comptes ni le lien secret ne leur sont montrés.
 
