@@ -1,4 +1,6 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
+import { InfoIcon } from "@/components/ui/icons";
 import { SiteHeader } from "@/components/layout/site-header";
 import { getCurrentUser } from "@/server/auth/current-user";
 import { getDb } from "@/server/db/client";
@@ -17,6 +19,13 @@ export default async function SiteLayout({ children }: { children: ReactNode }) 
     <>
       <SiteHeader user={user} unreadNotifications={unread} photoUrl={sitePhotoUrl(getSitePhotoVersion(getDb()), "nav")} />
       <main className="mx-auto max-w-3xl px-4 py-6">{children}</main>
+      {unread !== null ? (
+        <footer className="mx-auto max-w-3xl border-t border-line px-4 pt-4 pb-8 text-sm">
+          <Link href="/about" className="inline-flex min-h-11 items-center gap-1.5 text-accent underline-offset-4 hover:underline">
+            <InfoIcon className="size-4" />À propos
+          </Link>
+        </footer>
+      ) : null}
     </>
   );
 }

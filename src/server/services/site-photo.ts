@@ -1,9 +1,10 @@
 // The site photo: a picture chosen in the administration, shown in a circle
 // left of the site name in the header, and as the icon of the browser tab.
 //
-// Only two small square versions are kept (the original is not):
+// Three square versions are kept (the original is not):
 // - "nav": 96 px, shown at 32 px in the header (sharp on high-density screens);
-// - "icon": 64 px, the tab icon.
+// - "icon": 64 px, the tab icon;
+// - "large": 480 px, centred on the "À propos" page.
 // The version (time of the last change) is part of their address, so a new
 // photo is never hidden by a browser cache.
 
@@ -16,7 +17,7 @@ import { siteSettings } from "@/server/db/schema";
 import { canManageJournal, type Actor } from "@/server/permissions";
 
 export const SITE_PHOTO_MAX_BYTES = 8 * 1024 * 1024;
-export const SITE_PHOTO_SIZES = { nav: 96, icon: 64 } as const;
+export const SITE_PHOTO_SIZES = { nav: 96, icon: 64, large: 480 } as const;
 export type SitePhotoSize = keyof typeof SITE_PHOTO_SIZES;
 
 const VERSION_KEY = "site_photo_version";

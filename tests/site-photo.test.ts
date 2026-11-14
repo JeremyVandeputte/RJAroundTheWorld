@@ -37,7 +37,7 @@ describe("site photo", () => {
     expect(getSitePhotoVersion(db)).toBe(1_800_000_000_000);
     expect(sitePhotoUrl(1_800_000_000_000, "icon")).toBe("/api/site-photo?size=icon&v=1800000000000");
 
-    for (const [size, pixels] of [["nav", 96], ["icon", 64]] as const) {
+    for (const [size, pixels] of [["nav", 96], ["icon", 64], ["large", 480]] as const) {
       const meta = await sharp(sitePhotoPath(config.mediaDir, size)).metadata();
       expect(meta).toMatchObject({ format: "png", width: pixels, height: pixels });
     }
@@ -55,6 +55,7 @@ describe("site photo", () => {
     expect(getSitePhotoVersion(db)).toBeNull();
     expect(fs.existsSync(sitePhotoPath(config.mediaDir, "nav"))).toBe(false);
     expect(fs.existsSync(sitePhotoPath(config.mediaDir, "icon"))).toBe(false);
+    expect(fs.existsSync(sitePhotoPath(config.mediaDir, "large"))).toBe(false);
   });
 
   it("is changed only by the people who run the journal", async () => {

@@ -15,7 +15,7 @@ import {
   type SitePhotoSize,
 } from "@/server/services/site-photo";
 
-// GET    /api/site-photo?size=nav|icon&v=<version>  the site photo (header, tab icon)
+// GET    /api/site-photo?size=nav|icon|large&v=<version>  the site photo (header, tab icon, about page)
 // POST   /api/site-photo                             body: the new image
 // DELETE /api/site-photo
 //
@@ -38,11 +38,16 @@ function answer(result: SitePhotoResult, done: string): Response {
 
 export async function GET(request: NextRequest) {
   const size = request.nextUrl.searchParams.get("size");
-  if (size !== "nav" && size !== "icon") return plainNotFound();
+  if (size !== "nav" && size !== "icon" && size !== "large") return plainNotFound();
   const version = getSitePhotoVersion(getDb());
   if (version === null) return plainNotFound();
+  const mediaDir = getEnv().mediaDir;
   try {
-    const file = await readFile(sitePhotoPath(getEnv().mediaDir, size as SitePhotoSize));
+    // A photo chosen before the large size existed only has the small ones.
+    const file = await readFile(sitePhotoPath(mediaDir, size as SitePhotoSize)).catch((error: unknown) => {
+      if (size === "large") return readFile(sitePhotoPath(mediaDir, "nav"));
+      throw error;
+    });
     // The version is in the address: the same address always gives the same picture.
     const cache = request.nextUrl.searchParams.get("v") === String(version) ? "private, max-age=31536000, immutable" : "no-store";
     return new Response(new Uint8Array(file), { headers: { "Content-Type": "image/png", "Cache-Control": cache } });

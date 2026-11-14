@@ -95,7 +95,7 @@ Pas d'inscription libre : seuls le script `create-superuser` et la page « Admin
 - **désactiver ou réactiver** un compte : un compte désactivé est déconnecté partout et ne peut plus se connecter ;
 - **supprimer** un compte. Un compte qui a écrit des entrées ne peut pas être supprimé : il faut le désactiver ;
 - **gérer les tags** : en créer, les renommer (partout où ils sont utilisés) ou les supprimer (ils sont retirés des entrées) ;
-- **choisir la photo du site** : affichée dans un rond à gauche de « RJ Around The World » en haut de chaque page (page de connexion comprise) et comme icône de l'onglet du navigateur. Elle est recadrée en carré au centre ; JPEG, PNG ou WebP, 8 Mo au maximum. « Retirer la photo » revient au nom seul et à l'icône « RJ ». L'icône de l'application installée sur un téléphone reste l'icône « RJ ».
+- **choisir la photo du site** : affichée dans un rond à gauche de « RJ Around The World » en haut de chaque page (page de connexion comprise), comme icône de l'onglet du navigateur et en grand sur la page « À propos ». Elle est recadrée en carré au centre ; JPEG, PNG ou WebP, 8 Mo au maximum. « Retirer la photo » revient au nom seul et à l'icône « RJ ». L'icône de l'application installée sur un téléphone reste l'icône « RJ ».
 
 Les comptes qui ont **à la fois Publier et Gérer les voyages** ont aussi accès à « Administration », mais seulement pour les tags et la photo du site : ni les comptes ni le lien secret ne leur sont montrés.
 
@@ -186,6 +186,10 @@ La carte utilise Leaflet (inclus dans le site, aucun CDN) et les fonds de carte 
 - **Carte de tous les voyages** : bouton « Carte de tous les voyages » sur l'accueil (`/map`). Tous les lieux des entrées publiées, une couleur par voyage (attribuées du plus ancien au plus récent, pour qu'un nouveau voyage ne change pas celles des autres ; elles se répètent au-delà de huit voyages). Les couleurs sont choisies pour rester distinctes pour les personnes daltoniennes, et chaque voyage est aussi nommé dans la légende et dans l'info-bulle de ses marqueurs. Un appui sur un marqueur ouvre l'entrée ; la légende sous la carte mène à la carte de chaque voyage. Mêmes règles que la carte d'un voyage : un voyage masqué n'y apparaît que pour son auteur et le superuser.
 - **Page d'une entrée** : une petite carte montre son lieu ou son trajet.
 - Les brouillons n'apparaissent jamais sur la carte, même pour leur auteur.
+
+### À propos
+
+Lien « À propos » en bas de chaque page (une fois connecté), page `/about` : la photo du site en grand, au centre, puis ce qu'est le site (le blog de nos voyages) et sa raison d'être (retrouver tous nos souvenirs de voyage au même endroit pour les reconsulter facilement). Le texte se modifie dans `src/app/(site)/about/page.tsx`.
 
 ### Recherche et statistiques
 
