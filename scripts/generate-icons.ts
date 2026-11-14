@@ -24,7 +24,7 @@ function drawing({ rounded, padding }: { rounded: boolean; padding: number }): B
 
 const outputs: { file: string; size: number; rounded: boolean; padding: number }[] = [
   // Browser tab and bookmarks.
-  { file: "src/app/icon.png", size: 64, rounded: true, padding: 0 },
+  { file: "public/icons/favicon.png", size: 64, rounded: true, padding: 0 },
   // iOS home screen: iOS rounds the corners itself.
   { file: "src/app/apple-icon.png", size: 180, rounded: false, padding: 0.1 },
   // Installed application (manifest).

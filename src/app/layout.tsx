@@ -2,9 +2,19 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { ServiceWorker } from "@/components/layout/service-worker";
 import { APP_NAME } from "@/lib/app";
+import { getDb } from "@/server/db/client";
+import { getSitePhotoVersion, sitePhotoUrl } from "@/server/services/site-photo";
 import "./globals.css";
 
-export const metadata: Metadata = {
+const DEFAULT_ICON = "/icons/favicon.png";
+
+export async function generateMetadata(): Promise<Metadata> {
+  // The tab icon is the site photo when one was chosen in the administration.
+  const photo = sitePhotoUrl(getSitePhotoVersion(getDb()), "icon");
+  return { ...metadata, icons: { icon: [{ url: photo ?? DEFAULT_ICON, type: "image/png" }], apple: "/apple-icon.png" } };
+}
+
+const metadata: Metadata = {
   title: { default: APP_NAME, template: `%s · ${APP_NAME}` },
   // Privacy requirement: never indexed, no sharing metadata (no Open Graph).
   robots: { index: false, follow: false },

@@ -61,6 +61,14 @@ export const messages = {
     created: "Tag créé.",
     renamed: "Tag renommé.",
   },
+  sitePhoto: {
+    forbidden: "Vous n'avez pas la permission de changer la photo du site.",
+    too_large: "Cette image est trop lourde (8 Mo au maximum).",
+    unsupported_image: "Ce fichier n'est pas une image prise en charge (JPEG, PNG ou WebP).",
+    empty: "Choisissez une image.",
+    saved: "Photo du site enregistrée.",
+    removed: "Photo du site retirée.",
+  },
   cover: {
     not_found: "Cette photo n'existe plus.",
     forbidden: "Vous n'avez pas le droit de changer cette miniature.",

@@ -22,12 +22,22 @@ function NotificationBell({ unread }: { unread: number }) {
   );
 }
 
-/** `unreadNotifications` is null when the bell must not be shown (anonymous visitor). */
-export function SiteHeader({ user, unreadNotifications }: { user: SessionUser | null; unreadNotifications: number | null }) {
+type SiteHeaderProps = {
+  user: SessionUser | null;
+  /** Null when the bell must not be shown (anonymous visitor). */
+  unreadNotifications: number | null;
+  /** Site photo chosen in the administration, shown left of the name. */
+  photoUrl: string | null;
+};
+
+export function SiteHeader({ user, unreadNotifications, photoUrl }: SiteHeaderProps) {
   return (
     <header className="border-b border-line bg-white">
       <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-1.5">
-        <Link href="/" className="py-1.5 font-semibold tracking-tight">
+        <Link href="/" className="flex items-center gap-2.5 py-1.5 font-semibold tracking-tight">
+          {photoUrl ? (
+            <img src={photoUrl} alt="" width={32} height={32} className="size-8 shrink-0 rounded-full object-cover ring-1 ring-line" />
+          ) : null}
           {APP_NAME}
         </Link>
         <nav aria-label="Compte" className="flex items-center gap-3 text-sm">

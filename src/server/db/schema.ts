@@ -246,3 +246,10 @@ export const notifications = sqliteTable(
   },
   (t) => [index("notifications_recipient_idx").on(t.recipientId, t.readAt, t.createdAt)],
 );
+
+/** Site-wide settings, one row per key (for instance the version of the site photo). */
+export const siteSettings = sqliteTable("site_settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+});

@@ -3,6 +3,7 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { getCurrentUser } from "@/server/auth/current-user";
 import { getDb } from "@/server/db/client";
 import { countUnreadNotifications } from "@/server/services/notifications";
+import { getSitePhotoVersion, sitePhotoUrl } from "@/server/services/site-photo";
 
 // Do not add a loading.tsx (or Suspense around pages) in this segment: with
 // streaming, the "200 OK" status is sent before a page can call notFound() or
@@ -14,7 +15,7 @@ export default async function SiteLayout({ children }: { children: ReactNode }) 
   const unread = user && !user.mustChangePassword ? countUnreadNotifications(getDb(), user) : null;
   return (
     <>
-      <SiteHeader user={user} unreadNotifications={unread} />
+      <SiteHeader user={user} unreadNotifications={unread} photoUrl={sitePhotoUrl(getSitePhotoVersion(getDb()), "nav")} />
       <main className="mx-auto max-w-3xl px-4 py-6">{children}</main>
     </>
   );

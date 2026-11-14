@@ -64,6 +64,13 @@
       "when": 1794615370168,
       "tag": "0008_remove_comments_reactions",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1794616301974,
+      "tag": "0009_site_settings",
+      "breakpoints": true
     }
   ]
 }

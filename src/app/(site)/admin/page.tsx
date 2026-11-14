@@ -3,12 +3,15 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CreateUserForm } from "@/components/admin/create-user-form";
 import { permissionSummary, UserBadges } from "@/components/admin/user-badges";
+import { SitePhotoAdmin } from "@/components/admin/site-photo-admin";
 import { TagAdmin } from "@/components/admin/tag-admin";
+import { APP_NAME } from "@/lib/app";
 import { CopyButton } from "@/components/ui/copy-button";
 import { getEnv } from "@/lib/env";
 import { getViewer } from "@/server/auth/current-user";
 import { getDb } from "@/server/db/client";
-import { canAccessAdmin } from "@/server/permissions";
+import { canAccessAdmin, canManageJournal } from "@/server/permissions";
+import { getSitePhotoVersion, sitePhotoUrl } from "@/server/services/site-photo";
 import { listUsers } from "@/server/services/admin";
 import { listTagsWithUsage } from "@/server/services/tags";
 
@@ -61,6 +64,19 @@ export default async function AdminPage() {
             <CreateUserForm />
           </section>
         </>
+      ) : null}
+
+      {canManageJournal(viewer) ? (
+        <section aria-labelledby="photo-title" className="max-w-xl">
+          <h2 id="photo-title" className="text-lg font-semibold">
+            Photo du site
+          </h2>
+          <p className="mt-1 mb-4 text-sm text-muted">
+            Affichée dans un rond à gauche de « {APP_NAME} » en haut de chaque page, et comme icône de l&apos;onglet du
+            navigateur. Elle est recadrée en carré, au centre. JPEG, PNG ou WebP, 8 Mo au maximum.
+          </p>
+          <SitePhotoAdmin photoUrl={sitePhotoUrl(getSitePhotoVersion(getDb()), "nav")} />
+        </section>
       ) : null}
 
       {tags ? (
