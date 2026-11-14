@@ -1,17 +1,18 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { MarkAsRead } from "@/components/entry/mark-as-read";
 import { MediaGallery } from "@/components/entry/media-gallery";
 import { RichText } from "@/components/entry/rich-text";
 import { TripMap } from "@/components/map/trip-map";
 import { TagList } from "@/components/tags/tag-list";
 import { Badge } from "@/components/ui/badge";
-import { MapPinIcon, PencilIcon, RouteIcon, UsersIcon } from "@/components/ui/icons";
+import { ChartIcon, MapPinIcon, PencilIcon, RouteIcon, UsersIcon } from "@/components/ui/icons";
 import { LinkButton } from "@/components/ui/link-button";
 import { formatDate } from "@/lib/dates";
 import { getDb } from "@/server/db/client";
 import { loadEntry } from "@/server/page-data";
-import { canEditEntry } from "@/server/permissions";
+import { canEditEntry, canManageJournal } from "@/server/permissions";
 import { listEntryMedia } from "@/server/services/media";
 
 type EntryPageProps = { params: Promise<{ tripSlug: string; entryId: string }> };
@@ -35,6 +36,9 @@ export default async function EntryPage({ params }: EntryPageProps) {
   if (!trip || !detail) notFound();
   const { entry, author, people } = detail;
 
+  const canEdit = canEditEntry(viewer, trip, entry);
+  // Who read it: for the people who run the journal, once published.
+  const showReads = canManageJournal(viewer) && entry.status === "published";
   const hasPointA = entry.pointALat !== null;
   const hasPointB = entry.pointBLat !== null;
 
@@ -101,12 +105,22 @@ export default async function EntryPage({ params }: EntryPageProps) {
         />
       ) : null}
 
-      {canEditEntry(viewer, trip, entry) ? (
-        <div className="border-t border-line pt-4">
-          <LinkButton href={`/trips/${trip.slug}/entries/${entry.id}/edit`}>
-            <PencilIcon className="mr-2 size-5 text-accent" />
-            Modifier l&apos;entrée
-          </LinkButton>
+      <MarkAsRead entryId={entry.id} />
+
+      {canEdit || showReads ? (
+        <div className="flex flex-wrap gap-3 border-t border-line pt-4">
+          {canEdit ? (
+            <LinkButton href={`/trips/${trip.slug}/entries/${entry.id}/edit`}>
+              <PencilIcon className="mr-2 size-5 text-accent" />
+              Modifier l&apos;entrée
+            </LinkButton>
+          ) : null}
+          {showReads ? (
+            <LinkButton href={`/trips/${trip.slug}/entries/${entry.id}/reads`}>
+              <ChartIcon className="mr-2 size-5 text-accent" />
+              Statistiques
+            </LinkButton>
+          ) : null}
         </div>
       ) : null}
     </article>

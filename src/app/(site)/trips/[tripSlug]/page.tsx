@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { TagList } from "@/components/tags/tag-list";
 import { TripFiltersForm } from "@/components/trips/trip-filters";
 import { Badge } from "@/components/ui/badge";
+import { UnreadDot } from "@/components/ui/unread-dot";
 import { DownloadIcon, MapIcon, PencilIcon, PlusIcon } from "@/components/ui/icons";
 import { LinkButton } from "@/components/ui/link-button";
 import { formatDate, formatDateRange } from "@/lib/dates";
@@ -14,6 +15,7 @@ import { loadTrip } from "@/server/page-data";
 import { canCreateEntry, canEditTrip, canExportTrip } from "@/server/permissions";
 import { listEntries, listTripFilterOptions } from "@/server/services/entries";
 import { listCoverPhotos, listTripCovers } from "@/server/services/media";
+import { unreadEntryIds } from "@/server/services/reads";
 
 const manageLink = "inline-flex min-h-11 items-center gap-1.5 text-accent underline-offset-4 hover:underline";
 
@@ -34,6 +36,8 @@ export default async function TripPage({ params, searchParams }: TripPageProps) 
   const options = listTripFilterOptions(getDb(), viewer, trip);
   const entries = listEntries(getDb(), viewer, trip, filters);
   const isFiltered = hasActiveFilters(filters);
+  // Published entries this viewer has not opened yet.
+  const unread = unreadEntryIds(getDb(), viewer, entries);
   const canWrite = canCreateEntry(viewer, trip);
   const canManage = canEditTrip(viewer, trip);
   const canExport = canExportTrip(viewer, trip);
@@ -132,6 +136,7 @@ export default async function TripPage({ params, searchParams }: TripPageProps) 
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm text-muted">{formatDate(entry.date)}</span>
                     <span className="mt-0.5 flex flex-wrap items-center gap-2">
+                      {unread.has(entry.id) ? <UnreadDot /> : null}
                       <span className="font-semibold">{entry.title}</span>
                       {entry.status === "draft" ? <Badge tone="warning">Brouillon</Badge> : null}
                     </span>

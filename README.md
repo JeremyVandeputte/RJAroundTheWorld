@@ -154,6 +154,12 @@ Réservé aux comptes qui ont à la fois Publier et Gérer les voyages, et au su
 
 L'archive contient les entrées publiées (jamais les brouillons). L'archive est produite au fil du téléchargement, sans être construite d'abord sur le serveur ; les fichiers n'étant pas recompressés, elle pèse à peu près le poids des photos et vidéos du voyage. Au-delà de 4 Go, le format ZIP64 est utilisé (lu par Windows, macOS, Linux et 7-Zip).
 
+### Entrées non lues et lectures
+
+- **Pastille bleue** : dans la liste d'un voyage, une petite pastille bleue précède le titre des entrées publiées que l'on n'a pas encore ouvertes ; sur l'accueil, la carte du voyage indique « N nouvelles entrées à lire ». Une entrée compte comme lue dès que sa page a été affichée (un lien simplement visible ou préchargé ne compte pas). On n'a jamais ses propres entrées à lire.
+- **Statistiques de lecture** : sur la page d'une entrée publiée, le bouton « Statistiques » (comptes qui ont à la fois Publier et Gérer les voyages, et superuser) liste qui l'a lue, avec la date de la première lecture, et qui ne l'a pas encore lue, parmi les comptes actifs qui peuvent voir le voyage ; l'auteur n'est pas compté.
+- Les lectures ne sont enregistrées que depuis l'ajout de cette fonction : les entrées publiées avant apparaissent comme non lues pour tout le monde jusqu'à leur première ouverture.
+
 ### Filtres
 
 Le journal et la carte d'un voyage ont une barre « Filtrer par jour ou par tag », qui ouvre un panneau ; une pastille y indique le nombre de filtres actifs.

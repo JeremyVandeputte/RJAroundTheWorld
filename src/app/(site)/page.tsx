@@ -9,12 +9,14 @@ import { getViewer } from "@/server/auth/current-user";
 import { getDb } from "@/server/db/client";
 import { canCreateTrip, canViewStats } from "@/server/permissions";
 import { listTripCovers } from "@/server/services/media";
+import { unreadCountByTrip } from "@/server/services/reads";
 import { listTrips } from "@/server/services/trips";
 
 export default async function HomePage() {
   const viewer = await getViewer();
   const trips = listTrips(getDb(), viewer);
   const covers = listTripCovers(getDb(), trips);
+  const unread = unreadCountByTrip(getDb(), viewer, trips);
 
   return (
     <div className="space-y-6">
@@ -72,6 +74,12 @@ export default async function HomePage() {
                   {!trip.isVisible ? <Badge tone="warning">Non visible</Badge> : null}
                 </span>
                 <span className="mt-1 block text-sm text-muted">{formatDateRange(trip.startDate, trip.endDate)}</span>
+                {unread.get(trip.id) ? (
+                  <span className="mt-2 flex items-center gap-2 text-sm font-medium text-blue-700">
+                    <span aria-hidden="true" className="size-2.5 rounded-full bg-blue-600 ring-2 ring-blue-600/20" />
+                    {unread.get(trip.id)} nouvelle{unread.get(trip.id)! > 1 ? "s" : ""} entrée{unread.get(trip.id)! > 1 ? "s" : ""} à lire
+                  </span>
+                ) : null}
                 {trip.description ? <span className="mt-2 block">{trip.description}</span> : null}
                 </span>
               </Link>
