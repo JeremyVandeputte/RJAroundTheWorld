@@ -10,7 +10,7 @@ import { startUpload, type UploadConfig } from "@/server/media/upload";
 import type { Actor } from "@/server/permissions";
 import { createEntry, type Entry } from "@/server/services/entries";
 import type { Trip } from "@/server/services/trips";
-import { entryInput, insertCast, makeTrip } from "./helpers/fixtures";
+import { entryInput, insertCast, insertUser, makeTrip } from "./helpers/fixtures";
 import { createMediaConfig, removeMediaDir, samplePhoto, sampleVideo } from "./helpers/media";
 import { createTestDb } from "./helpers/test-db";
 import { collect, readZip } from "./helpers/zip-reader";
@@ -134,18 +134,19 @@ describe("trip export", () => {
     expect(escapeHtml(`"'&<>`)).toBe("&quot;&#39;&amp;&lt;&gt;");
   });
 
-  it("is only for the people who manage the trip", async () => {
+  it("is only for the people who run the journal, in the trips they can see", async () => {
     const hidden = makeTrip(db, cast.superuser, { title: "Surprise", isVisible: false });
     entry("publish", { title: "Secret" }, cast.superuser, hidden);
     expect((await archive(cast.superuser, hidden))!.journal.entries).toHaveLength(1);
-    // Seeing a trip, or writing in it, is not enough.
+    // Publier and Gérer les voyages together, whoever created the trip.
+    const editor = insertUser(db, "chloe", { canPublish: true, canManageTrips: true });
+    expect(await buildTripExport(db, editor, trip, config.mediaDir)).not.toBeNull();
+    // ...but not a trip they cannot see.
+    expect(await buildTripExport(db, editor, hidden, config.mediaDir)).toBeNull();
+    // One of the two permissions is not enough.
     for (const actor of [cast.guest, cast.publisher, cast.manager, null]) {
       expect(await buildTripExport(db, actor, trip, config.mediaDir)).toBeNull();
     }
-    // The author of a trip exports it while they hold "Gérer les voyages".
-    const own = makeTrip(db, cast.manager, { title: "Islande" });
-    expect(await buildTripExport(db, cast.manager, own, config.mediaDir)).not.toBeNull();
-    expect(await buildTripExport(db, { ...cast.manager, canManageTrips: false }, own, config.mediaDir)).toBeNull();
   });
 
   it("leaves out a file missing on disk instead of failing", async () => {

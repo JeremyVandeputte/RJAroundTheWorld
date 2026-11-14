@@ -7,7 +7,8 @@ import { getDb } from "@/server/db/client";
 import { createTag, deleteTag, renameTag } from "@/server/services/tags";
 import { formId, formString, type FormState } from "./form-state";
 
-// Tag administration (superuser). Permissions are enforced by the service.
+// Tag administration (superuser, and accounts with Publier and Gérer les
+// voyages). Permissions are enforced by the service.
 
 export async function createTagAction(_previous: FormState, formData: FormData): Promise<FormState> {
   const result = createTag(getDb(), await getCurrentUser(), formString(formData, "name"));

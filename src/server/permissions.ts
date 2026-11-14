@@ -19,6 +19,8 @@ import type { EntryStatus } from "@/server/db/schema";
  *   create a trip                 no       if Gérer les voyages yes
  *   edit / hide / delete a trip   no       own, if Gérer les voyages  yes
  *   manage users                  no       no                  yes
+ *   statistics, trip archive,     no       if Publier and      yes
+ *   tags and site photo                    Gérer les voyages
  *
  * (*) only in trips the user can see.
  */
@@ -56,8 +58,30 @@ export function canUseSite(actor: Actor): boolean {
 }
 
 /** Renaming and deleting tags, which affects every entry using them. */
+/**
+ * The people who run the journal: the superuser, and accounts that hold
+ * both Publier and Gérer les voyages. They see the statistics, download
+ * trips as archives, and manage tags and the site photo in the
+ * administration page (but not the accounts).
+ */
+export function canManageJournal(actor: Actor): boolean {
+  const user = effectiveUser(actor);
+  return user !== null && (isSuperuser(user) || (user.canPublish && user.canManageTrips));
+}
+
+/** Renaming and deleting tags. */
 export function canManageTags(actor: Actor): boolean {
-  return isSuperuser(effectiveUser(actor));
+  return canManageJournal(actor);
+}
+
+/** The administration page: accounts for the superuser, tags and site photo for the others. */
+export function canAccessAdmin(actor: Actor): boolean {
+  return canManageUsers(actor) || canManageJournal(actor);
+}
+
+/** The statistics page. */
+export function canViewStats(actor: Actor): boolean {
+  return canManageJournal(actor);
 }
 
 export function canCreateTrip(actor: Actor): boolean {
@@ -75,9 +99,9 @@ export function canEditTrip(actor: Actor, trip: TripAccess): boolean {
   return isSuperuser(user) || (user.canManageTrips && trip.authorId === user.id);
 }
 
-/** Downloading a trip as an archive: the same people who manage it. */
+/** Downloading a trip as an archive: the people who run the journal, for trips they can see. */
 export function canExportTrip(actor: Actor, trip: TripAccess): boolean {
-  return canEditTrip(actor, trip);
+  return canManageJournal(actor) && canViewTrip(actor, trip);
 }
 
 /**

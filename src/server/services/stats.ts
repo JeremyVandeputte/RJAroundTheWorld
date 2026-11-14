@@ -2,7 +2,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { distanceKm } from "@/lib/geo";
 import type { Db } from "@/server/db/client";
 import { entries, entryPeople, media, users } from "@/server/db/schema";
-import type { Actor } from "@/server/permissions";
+import { canViewStats, type Actor } from "@/server/permissions";
 import { tagsOfEntries, type Tag } from "./tags";
 import { listTrips, type Trip } from "./trips";
 
@@ -45,10 +45,12 @@ function bump<T extends { id: number }>(counts: Map<number, Ranked<T>>, item: T)
 }
 
 /**
- * Figures of the journal, computed only from what the actor may see on the
- * trip pages, and only from published entries (drafts are work in progress).
+ * Figures of the journal, for the people who run it (null for anyone else),
+ * computed only from what the actor may see on the trip pages, and only from
+ * published entries (drafts are work in progress).
  */
-export function journalStats(db: Db, actor: Actor): JournalStats {
+export function journalStats(db: Db, actor: Actor): JournalStats | null {
+  if (!canViewStats(actor)) return null;
   const tagCounts = new Map<number, Ranked<Tag>>();
   const authorCounts = new Map<number, Ranked<{ id: number; displayName: string }>>();
   const peopleCounts = new Map<number, Ranked<{ id: number; displayName: string }>>();

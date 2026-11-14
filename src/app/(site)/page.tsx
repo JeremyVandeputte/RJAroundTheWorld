@@ -6,7 +6,7 @@ import { formatDateRange } from "@/lib/dates";
 import { thumbnailUrl } from "@/lib/media-url";
 import { getViewer } from "@/server/auth/current-user";
 import { getDb } from "@/server/db/client";
-import { canCreateTrip } from "@/server/permissions";
+import { canCreateTrip, canViewStats } from "@/server/permissions";
 import { listTripCovers } from "@/server/services/media";
 import { listTrips } from "@/server/services/trips";
 
@@ -27,7 +27,7 @@ export default async function HomePage() {
           <SearchForm />
           <div className="flex flex-wrap gap-3">
             <LinkButton href="/map">Carte de tous les voyages</LinkButton>
-            <LinkButton href="/stats">Statistiques</LinkButton>
+            {canViewStats(viewer) ? <LinkButton href="/stats">Statistiques</LinkButton> : null}
           </div>
         </div>
       ) : null}

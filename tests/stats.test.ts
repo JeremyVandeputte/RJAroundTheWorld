@@ -6,7 +6,7 @@ import type { Actor } from "@/server/permissions";
 import { createEntry, type Entry } from "@/server/services/entries";
 import { journalStats } from "@/server/services/stats";
 import type { Trip } from "@/server/services/trips";
-import { entryInput, insertCast, makeTrip } from "./helpers/fixtures";
+import { entryInput, insertCast, insertUser, makeTrip } from "./helpers/fixtures";
 import { createTestDb } from "./helpers/test-db";
 
 let db: Db;
@@ -66,7 +66,7 @@ describe("journal statistics", () => {
     addMedia(rando, "video");
     addMedia(draft, "photo");
 
-    const stats = journalStats(db, cast.guest);
+    const stats = journalStats(db, cast.superuser)!;
     expect(stats.trips).toHaveLength(1);
     expect(stats.trips[0]).toMatchObject({ entries: 3, days: 2, photos: 2, videos: 1 });
     expect(stats.trips[0]!.routeKm).toBeCloseTo(11.1, 0);
@@ -86,19 +86,29 @@ describe("journal statistics", () => {
     ]);
   });
 
+  it("are only for the people who run the journal (Publier and Gérer les voyages)", () => {
+    entry("publish");
+    const editor = insertUser(db, "chloe", { canPublish: true, canManageTrips: true });
+    expect(journalStats(db, editor)).not.toBeNull();
+    expect(journalStats(db, cast.superuser)).not.toBeNull();
+    for (const actor of [cast.guest, cast.publisher, cast.manager, null, { ...editor, isActive: false }]) {
+      expect(journalStats(db, actor)).toBeNull();
+    }
+  });
+
   it("only count what the viewer may see", () => {
     entry("publish", { title: "Visible" });
     const hidden = makeTrip(db, cast.superuser, { title: "Surprise", isVisible: false });
     entry("publish", { title: "Cachée" }, cast.superuser, hidden);
+    const editor = insertUser(db, "chloe", { canPublish: true, canManageTrips: true });
 
-    expect(journalStats(db, cast.guest).totals).toMatchObject({ trips: 1, entries: 1 });
-    expect(journalStats(db, cast.superuser).totals).toMatchObject({ trips: 2, entries: 2 });
-    expect(journalStats(db, null).totals).toMatchObject({ trips: 0, entries: 0 });
+    expect(journalStats(db, editor)!.totals).toMatchObject({ trips: 1, entries: 1 });
+    expect(journalStats(db, cast.superuser)!.totals).toMatchObject({ trips: 2, entries: 2 });
   });
 
   it("list a trip without published entries with zeros", () => {
     entry("save");
-    const stats = journalStats(db, cast.publisher);
+    const stats = journalStats(db, cast.superuser)!;
     expect(stats.trips[0]).toMatchObject({ entries: 0, days: 0, photos: 0, videos: 0, routeKm: 0 });
     expect(stats.tags).toEqual([]);
     expect(stats.authors).toEqual([]);

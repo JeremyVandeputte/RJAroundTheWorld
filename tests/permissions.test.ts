@@ -7,6 +7,10 @@ import {
   canEditTrip,
   canExportTrip,
   canManageUsers,
+  canManageJournal,
+  canManageTags,
+  canAccessAdmin,
+  canViewStats,
   canReadEntryNotification,
   canViewEntry,
   canViewTrip,
@@ -94,12 +98,23 @@ describe("trip management", () => {
     expectAllowed((actor) => canEditTrip(actor, visibleTrip), ["superuser"]);
   });
 
-  it("lets only the people who manage a trip export it", () => {
-    for (const trip of [hiddenTrip, ownersVisibleTrip]) {
-      expectAllowed((actor) => canExportTrip(actor, trip), ["tripOwner", "superuser"]);
-    }
-    expectAllowed((actor) => canExportTrip(actor, visibleTrip), ["superuser"]);
+  it("lets the people who run the journal export the trips they can see", () => {
+    const runners: Name[] = ["tripOwner", "otherManager", "superuser"];
+    expectAllowed((actor) => canExportTrip(actor, visibleTrip), runners);
+    expectAllowed((actor) => canExportTrip(actor, hiddenTrip), ["tripOwner", "superuser"]);
     expect(canExportTrip({ ...tripOwner, canManageTrips: false }, ownersVisibleTrip)).toBe(false);
+  });
+
+  it("reserve statistics, tags and the administration page to Publier + Gérer les voyages", () => {
+    const runners: Name[] = ["tripOwner", "otherManager", "superuser"];
+    expectAllowed(canManageJournal, runners);
+    expectAllowed(canViewStats, runners);
+    expectAllowed(canManageTags, runners);
+    expectAllowed(canAccessAdmin, runners);
+    // Accounts stay with the superuser.
+    expectAllowed(canManageUsers, ["superuser"]);
+    expect(canManageJournal(user(20, { canManageTrips: true }))).toBe(false);
+    expect(canManageJournal(user(21, { canPublish: true }))).toBe(false);
   });
 
   it("stops the creator from changing the trip once Gérer les voyages is removed", () => {

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { getViewer } from "@/server/auth/current-user";
 import { getDb } from "@/server/db/client";
@@ -49,6 +50,8 @@ function Ranking({ id, title, items }: { id: string; title: string; items: Ranki
 export default async function StatsPage() {
   const viewer = await getViewer();
   const stats = journalStats(getDb(), viewer);
+  // Same answer as an unknown page for the people who may not see it.
+  if (!stats) notFound();
   const { totals } = stats;
 
   return (

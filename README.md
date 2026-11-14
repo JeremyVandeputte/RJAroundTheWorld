@@ -86,7 +86,7 @@ Le site ne répond qu'aux navigateurs qui ont ouvert le lien secret au moins une
 
 ### Comptes et permissions
 
-Pas d'inscription libre : seuls le script `create-superuser` et la page « Administration » (réservée au superuser) créent des comptes. Cette page permet de :
+Pas d'inscription libre : seuls le script `create-superuser` et la page « Administration » créent des comptes. Pour le superuser, cette page permet de :
 
 - **créer un compte** : identifiant, nom affiché et permissions. Un mot de passe temporaire est généré et affiché une seule fois ; la personne doit choisir le sien dès sa première connexion ;
 - **régler les permissions** de chaque compte : Publier et Gérer les voyages (désactivées par défaut : un nouveau compte peut seulement lire) ;
@@ -95,6 +95,8 @@ Pas d'inscription libre : seuls le script `create-superuser` et la page « Admin
 - **désactiver ou réactiver** un compte : un compte désactivé est déconnecté partout et ne peut plus se connecter ;
 - **supprimer** un compte. Un compte qui a écrit des entrées ne peut pas être supprimé : il faut le désactiver ;
 - **gérer les tags** : en créer, les renommer (partout où ils sont utilisés) ou les supprimer (ils sont retirés des entrées).
+
+Les comptes qui ont **à la fois Publier et Gérer les voyages** ont aussi accès à « Administration », mais seulement pour la gestion des tags (et la photo du site) : ni les comptes ni le lien secret ne leur sont montrés.
 
 Le compte superuser ne peut être ni désactivé, ni supprimé, ni réinitialisé depuis cette page : son mot de passe se change dans « Mon profil » ou avec `npm run create-superuser`.
 
@@ -112,6 +114,7 @@ Toutes les règles d'accès sont dans un seul fichier, `src/server/permissions.t
 | Créer un voyage | si Gérer les voyages | oui |
 | Modifier, masquer ou supprimer un voyage | les siens, si Gérer les voyages | oui |
 | Gérer les comptes | non | oui |
+| Statistiques, archive ZIP d'un voyage, tags et photo du site (administration) | si Publier et Gérer les voyages | oui |
 
 Sans compte, rien n'est accessible : seule la page de connexion répond.
 
@@ -141,7 +144,7 @@ Tout ce qui concerne les entrées ne vaut que dans les voyages que la personne p
 
 ### Exporter un voyage
 
-Réservé aux personnes qui gèrent le voyage (son auteur, tant qu'il a « Gérer les voyages », et le superuser) : les autres ne voient pas le lien. Sur la page du voyage, « Télécharger (ZIP) », dans le bandeau « Gestion du voyage », produit une archive `<voyage>.zip` contenant :
+Réservé aux comptes qui ont à la fois Publier et Gérer les voyages, et au superuser, pour les voyages qu'ils peuvent voir : les autres ne voient pas le lien. Sur la page du voyage, « Télécharger (ZIP) », dans le bandeau « Gestion du voyage », produit une archive `<voyage>.zip` contenant :
 
 - `index.html` : tout le voyage sur une seule page, lisible hors ligne dans n'importe quel navigateur (miniature, entrées de la plus ancienne à la plus récente, texte, lieux, personnes, tags, photos et vidéos). Elle ne contacte aucun serveur ; les lieux sont des liens vers OpenStreetMap, ouverts seulement si on les touche. Pour un PDF, ouvrir cette page et choisir « Imprimer » puis « Enregistrer au format PDF » (les vidéos sont alors omises).
 - `media/` : les photos et vidéos telles qu'elles sont stockées sur le site, avec des noms lisibles (`2026-11-11-plage-des-salines.jpg`).
@@ -186,7 +189,7 @@ La carte utilise Leaflet (inclus dans le site, aucun CDN) et les fonds de carte 
 ### Recherche et statistiques
 
 - **Recherche** : champ en haut de l'accueil (page `/search`). Cherche dans les titres, les textes, les noms de lieux, les tags, le nom du voyage, l'auteur et les personnes identifiées. Majuscules et accents sont ignorés (« foret » trouve « Forêt ») et tous les mots doivent être présents. Les mots trouvés sont surlignés, avec un extrait du texte. Les 50 entrées les plus récentes sont affichées. On ne trouve que ce que l'on peut déjà voir : entrées publiées des voyages visibles, plus ses propres brouillons (le superuser voit tout).
-- **Statistiques** : bouton « Statistiques » sur l'accueil (page `/stats`). Nombre de voyages, d'entrées, de jours racontés, de photos et de vidéos, longueur des trajets A → B (à vol d'oiseau), un tableau par voyage, les tags les plus utilisés, les personnes les plus présentes et qui écrit le plus. Seules les entrées publiées des voyages que l'on peut voir sont comptées.
+- **Statistiques** : bouton « Statistiques » sur l'accueil (page `/stats`). Nombre de voyages, d'entrées, de jours racontés, de photos et de vidéos, longueur des trajets A → B (à vol d'oiseau), un tableau par voyage, les tags les plus utilisés, les personnes les plus présentes et qui écrit le plus. Réservées aux comptes qui ont à la fois Publier et Gérer les voyages, et au superuser (les autres ne voient pas le bouton). Seules les entrées publiées des voyages que l'on peut voir sont comptées.
 
 ### Notifications
 

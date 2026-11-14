@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { APP_NAME } from "@/lib/app";
 import type { SessionUser } from "@/server/auth/sessions";
-import { canManageUsers } from "@/server/permissions";
+import { canAccessAdmin } from "@/server/permissions";
 
 const navLink = "text-accent underline-offset-4 hover:underline";
 
@@ -31,7 +31,7 @@ export function SiteHeader({ user, unreadNotifications }: { user: SessionUser | 
           {APP_NAME}
         </Link>
         <nav aria-label="Compte" className="flex items-center gap-3 text-sm">
-          {canManageUsers(user) ? (
+          {canAccessAdmin(user) ? (
             <Link href="/admin" className={navLink}>
               Administration
             </Link>
