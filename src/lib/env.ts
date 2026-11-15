@@ -27,7 +27,7 @@ const envSchema = z
     APP_URL: optional(z.url("must be a valid URL").default("http://localhost:3000")),
     DATABASE_PATH: optional(z.string().default("./data/rjaroundtheworld.db")),
     MEDIA_DIR: optional(z.string().default("./data/media")),
-    MAX_PHOTO_MB: positiveNumber(10),
+    MAX_PHOTO_MB: positiveNumber(20),
     MAX_VIDEO_MB: positiveNumber(300),
     MEDIA_QUOTA_GB: positiveNumber(30),
     SESSION_DAYS: positiveNumber(30),

@@ -12,7 +12,7 @@ describe("parseEnv", () => {
     expect(env.appOrigin).toBe("http://localhost:3000");
     expect(env.databasePath).toBe("./data/rjaroundtheworld.db");
     expect(env.mediaDir).toBe("./data/media");
-    expect(env.maxPhotoBytes).toBe(10 * 1024 * 1024);
+    expect(env.maxPhotoBytes).toBe(20 * 1024 * 1024);
     expect(env.maxVideoBytes).toBe(300 * 1024 * 1024);
     expect(env.mediaQuotaBytes).toBe(30 * 1024 * 1024 * 1024);
     expect(env.sessionDays).toBe(30);
@@ -23,7 +23,7 @@ describe("parseEnv", () => {
   it("treats empty values as not set", () => {
     const env = parseEnv({ ...valid, MEDIA_DIR: "", MAX_PHOTO_MB: " " });
     expect(env.mediaDir).toBe("./data/media");
-    expect(env.maxPhotoBytes).toBe(10 * 1024 * 1024);
+    expect(env.maxPhotoBytes).toBe(20 * 1024 * 1024);
   });
 
   it("reads custom limits and paths", () => {

@@ -65,7 +65,7 @@ Toute la configuration passe par des variables d'environnement (fichier `.env` e
 | `APP_URL` | non | `http://localhost:3000` | Adresse publique du site, sans `/` final. Obligatoirement en `https` en production. |
 | `DATABASE_PATH` | non | `./data/rjaroundtheworld.db` | Fichier de la base SQLite. |
 | `MEDIA_DIR` | non | `./data/media` | Dossier des photos et vidéos. Doit rester hors de `public/`. |
-| `MAX_PHOTO_MB` | non | `10` | Taille maximale d'une photo envoyée, en Mo. |
+| `MAX_PHOTO_MB` | non | `20` | Taille maximale d'une photo envoyée, en Mo. |
 | `MAX_VIDEO_MB` | non | `300` | Taille maximale d'une vidéo, en Mo. |
 | `FFMPEG_PATH` | non | vide | Programme ffmpeg qui convertit les vidéos après l'envoi (voir « Photos et vidéos »). Vide : les vidéos restent telles qu'envoyées. |
 | `MEDIA_QUOTA_GB` | non | `30` | Espace total réservé aux photos et vidéos, en Go. |
@@ -173,7 +173,7 @@ Le journal et la carte d'un voyage ont une barre « Filtrer par jour ou par tag 
 
 Elles s'ajoutent depuis « Modifier l'entrée », section « Photos et vidéos ». Sur une nouvelle entrée, le bouton « Enregistrer le brouillon et ajouter des photos » y mène directement. Chaque fichier est enregistré dès qu'il est envoyé, sans attendre « Enregistrer ».
 
-- **Photos** : JPEG, PNG ou WebP, 10 Mo maximum par défaut. Chaque photo est redressée, réduite à 2000 px sur le grand côté et convertie en JPEG, avec une miniature de 480 px. L'original n'est pas conservé.
+- **Photos** : JPEG, PNG ou WebP, 20 Mo maximum par défaut. Chaque photo est redressée, réduite à 2000 px sur le grand côté et convertie en JPEG, avec une miniature de 480 px. L'original n'est pas conservé.
 - **Vie privée** : les photos enregistrées ne contiennent plus aucune métadonnée (position GPS, modèle d'appareil). Leur position et leur date de prise de vue sont seulement notées en base, pour placer l'entrée sur la carte. Les vidéos ne perdent leurs métadonnées (dont la position GPS enregistrée par un téléphone) que si elles sont converties avec `FFMPEG_PATH` ; sinon elles restent telles qu'envoyées.
 - **Vidéos** : MP4, MOV ou WebM, 300 Mo maximum par défaut, lues par le lecteur du navigateur. Sans `FFMPEG_PATH`, elles sont enregistrées telles quelles.
 - **Conversion des vidéos** (si `FFMPEG_PATH` désigne le programme ffmpeg) : après l'envoi, chaque vidéo est convertie en MP4 H.264/AAC, lisible partout (une vidéo iPhone en HEVC ne l'est pas), réduite à 1920 px sur le grand côté (1080p), qualité CRF 26, sans métadonnées (un téléphone y enregistre la position GPS) et prête à être lue avant d'être entièrement chargée. La conversion se fait en arrière-plan, une vidéo à la fois : l'envoi n'attend pas, et la vidéo d'origine est lue en attendant. Elle reprend après un redémarrage du serveur. Si elle échoue, l'original est gardé et la raison est écrite dans les journaux du serveur. Compter de l'ordre d'une à quelques minutes par vidéo selon la machine.

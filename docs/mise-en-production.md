@@ -210,7 +210,7 @@ APP_URL=https://journal.exemple.fr
 DATABASE_PATH=/var/lib/rjaroundtheworld/rjaroundtheworld.db
 MEDIA_DIR=/var/lib/rjaroundtheworld/media
 
-MAX_PHOTO_MB=10
+MAX_PHOTO_MB=20
 MAX_VIDEO_MB=300
 MEDIA_QUOTA_GB=30
 
