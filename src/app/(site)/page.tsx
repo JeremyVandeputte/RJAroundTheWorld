@@ -4,7 +4,7 @@ import { SearchForm } from "@/components/search/search-form";
 import { ChartIcon, MapIcon, PlusIcon } from "@/components/ui/icons";
 import { LinkButton } from "@/components/ui/link-button";
 import { formatDateRange } from "@/lib/dates";
-import { thumbnailUrl } from "@/lib/media-url";
+import { mediaUrl, photoSrcSet } from "@/lib/media-url";
 import { getViewer } from "@/server/auth/current-user";
 import { getDb } from "@/server/db/client";
 import { canCreateTrip, canViewStats } from "@/server/permissions";
@@ -59,7 +59,10 @@ export default async function HomePage() {
               >
                 {covers.has(trip.id) ? (
                   <img
-                    src={thumbnailUrl(covers.get(trip.id)!.publicId)}
+                    src={mediaUrl(covers.get(trip.id)!.publicId)}
+                    srcSet={photoSrcSet(covers.get(trip.id)!)}
+                    // Width of the card: the page column (48rem) on a computer, the screen on a phone.
+                    sizes="(min-width: 48rem) 46rem, calc(100vw - 2rem)"
                     alt=""
                     loading="lazy"
                     decoding="async"
