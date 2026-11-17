@@ -85,10 +85,11 @@ export function TripFiltersForm({ basePath, days, tags, filters }: TripFiltersFo
 
         <form method="get" action={basePath} onSubmit={onSubmit} className="space-y-4 border-t border-line px-4 py-3">
           {days.length > 0 ? (
-            <fieldset>
+            // min-w-0: a fieldset is as wide as its content by default, which widened the page.
+            <fieldset className="min-w-0">
               <legend className="text-sm font-medium">Jour</legend>
-              {/* One line that scrolls sideways, however long the trip. */}
-              <div className="-mx-4 mt-2 flex gap-2 overflow-x-auto px-4 pb-1">
+              {/* The days wrap onto several lines, like the tags. */}
+              <div className="mt-2 flex flex-wrap gap-2">
                 {["", ...days].map((day) => {
                   const isChecked = (current.date ?? "") === day;
                   return (
@@ -110,7 +111,7 @@ export function TripFiltersForm({ basePath, days, tags, filters }: TripFiltersFo
           ) : null}
 
           {tags.length > 0 ? (
-            <fieldset>
+            <fieldset className="min-w-0">
               <legend className="text-sm font-medium">Tags</legend>
               <p className="text-sm text-muted">Les entrées qui ont au moins un des tags choisis.</p>
               <div className="mt-2 flex flex-wrap gap-2">
