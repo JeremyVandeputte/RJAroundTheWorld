@@ -2,7 +2,7 @@ import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { isValidDateString } from "@/lib/dates";
 import type { Db } from "@/server/db/client";
 import { entries, entryPeople, trips, users, type EntryStatus } from "@/server/db/schema";
-import { canCreateEntry, canEditEntry, canViewEntry, canViewTrip, canWriteEntries, type Actor } from "@/server/permissions";
+import { canCreateEntry, canEditEntry, canEditTrip, canViewEntry, canViewTrip, canWriteEntries, type Actor } from "@/server/permissions";
 import { notifyEntryPublished, notifyNewlyTagged } from "./notifications";
 import { matchesFilters, type TripFilters } from "@/lib/trip-filters";
 import { ensureTags, isValidTagName, setEntryTags, tagsExist, tagsOfEntries, type Tag } from "./tags";
@@ -57,7 +57,12 @@ export type EntryIssue =
 export type EntryListItem = Pick<Entry, "id" | "date" | "title" | "status" | "authorId"> & { authorName: string; tags: Tag[] };
 export type EntryDetail = { entry: Entry; author: Person; people: Person[]; tags: Tag[] };
 
-/** Entries of a trip the actor may see, most recent day first. */
+/** Journal order: most recent day first, and within a day the latest position first. */
+const journalOrder = [desc(entries.date), desc(entries.dayPosition), desc(entries.id)] as const;
+/** Story order (map, archive): the oldest first. */
+const storyOrder = [asc(entries.date), asc(entries.dayPosition), asc(entries.id)] as const;
+
+/** Entries of a trip the actor may see, in the order of the journal. */
 export function listEntries(db: Db, actor: Actor, trip: Trip, filters: TripFilters = NO_FILTERS): EntryListItem[] {
   if (!canViewTrip(actor, trip)) return [];
   const visible = db
@@ -72,7 +77,7 @@ export function listEntries(db: Db, actor: Actor, trip: Trip, filters: TripFilte
     .from(entries)
     .innerJoin(users, eq(users.id, entries.authorId))
     .where(eq(entries.tripId, trip.id))
-    .orderBy(desc(entries.date), desc(entries.id))
+    .orderBy(...journalOrder)
     .all()
     .filter((entry) => canViewEntry(actor, trip, entry));
   const tagsByEntry = tagsOfEntries(db, visible.map((entry) => entry.id));
@@ -212,6 +217,16 @@ function entryValues(input: EntryInput) {
   };
 }
 
+/** Position that puts an entry last in its day, so first in the journal. */
+function nextDayPosition(db: Db, tripId: number, date: string): number {
+  const row = db
+    .select({ highest: sql<number | null>`max(${entries.dayPosition})` })
+    .from(entries)
+    .where(and(eq(entries.tripId, tripId), eq(entries.date, date)))
+    .get();
+  return (row?.highest ?? 0) + 1;
+}
+
 function replacePeople(db: Db, entryId: number, peopleIds: number[]): void {
   db.delete(entryPeople).where(eq(entryPeople.entryId, entryId)).run();
   const unique = [...new Set(peopleIds)];
@@ -247,6 +262,7 @@ export function createEntry(
         ...entryValues(input),
         tripId: trip.id,
         authorId: actor.id,
+        dayPosition: nextDayPosition(tx as unknown as Db, trip.id, input.date),
         status,
         publishedAt: status === "published" ? now : null,
         createdAt: now,
@@ -296,6 +312,8 @@ export function updateEntry(
       .update(entries)
       .set({
         ...entryValues(input),
+        // Moved to another day: it goes first in that day of the journal.
+        ...(input.date !== found.entry.date ? { dayPosition: nextDayPosition(tx as unknown as Db, found.trip.id, input.date) } : {}),
         status,
         // Date of the first publication: kept when an entry is unpublished.
         publishedAt: found.entry.publishedAt ?? (status === "published" ? now : null),
@@ -327,6 +345,54 @@ export function deleteEntry(db: Db, actor: Actor, entryId: number): { ok: true; 
   return { ok: true, trip: found.trip };
 }
 
+export type MoveDirection = "up" | "down";
+
+/**
+ * Moves an entry up or down among the entries of its day, as the journal shows
+ * them to the actor ("up" is higher in the journal, so later in the day). Only
+ * the people who can modify the trip may do it. Entries the actor cannot see
+ * (other people's drafts) keep their place.
+ */
+export function moveEntry(
+  db: Db,
+  actor: Actor,
+  entryId: number,
+  direction: MoveDirection,
+): { ok: true; trip: Trip; moved: boolean } | { ok: false; reason: "forbidden" | "not_found" } {
+  const row = db
+    .select({ entry: entries, trip: trips })
+    .from(entries)
+    .innerJoin(trips, eq(trips.id, entries.tripId))
+    .where(eq(entries.id, entryId))
+    .get();
+  if (!row || !canViewEntry(actor, row.trip, row.entry)) return { ok: false, reason: "not_found" };
+  if (!canEditTrip(actor, row.trip)) return { ok: false, reason: "forbidden" };
+
+  // Every entry of the day, in journal order; the actor only sees some of them.
+  const day = db
+    .select({ id: entries.id, status: entries.status, authorId: entries.authorId })
+    .from(entries)
+    .where(and(eq(entries.tripId, row.trip.id), eq(entries.date, row.entry.date)))
+    .orderBy(...journalOrder)
+    .all();
+  const visible = day.filter((entry) => canViewEntry(actor, row.trip, entry));
+  const index = visible.findIndex((entry) => entry.id === entryId);
+  const other = visible[direction === "up" ? index - 1 : index + 1];
+  if (index === -1 || !other) return { ok: true, trip: row.trip, moved: false };
+
+  // The two entries swap places; the ones the actor cannot see stay where they are.
+  const order = day.map((entry) => entry.id);
+  const [a, b] = [order.indexOf(entryId), order.indexOf(other.id)];
+  [order[a], order[b]] = [order[b]!, order[a]!];
+  db.transaction((tx) => {
+    // Numbered again from the bottom of the journal: the first one gets the highest position.
+    order.forEach((id, position) => {
+      tx.update(entries).set({ dayPosition: order.length - position }).where(eq(entries.id, id)).run();
+    });
+  });
+  return { ok: true, trip: row.trip, moved: true };
+}
+
 export type MapPoint = { lat: number; lng: number; name: string | null };
 export type MapEntry = Pick<Entry, "id" | "title" | "date"> & { pointA: MapPoint; pointB: MapPoint | null };
 
@@ -340,7 +406,7 @@ export function listTripMapEntries(db: Db, actor: Actor, trip: Trip, filters: Tr
     .select()
     .from(entries)
     .where(and(eq(entries.tripId, trip.id), eq(entries.status, "published")))
-    .orderBy(asc(entries.date), asc(entries.id))
+    .orderBy(...storyOrder)
     .all()
     .filter((entry) => canViewEntry(actor, trip, entry));
   const tagsByEntry = tagsOfEntries(db, published.map((entry) => entry.id));

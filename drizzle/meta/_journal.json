@@ -78,6 +78,13 @@
       "when": 1794651565281,
       "tag": "0010_reads_and_last_visit",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1794926480593,
+      "tag": "0011_entry_day_position",
+      "breakpoints": true
     }
   ]
 }

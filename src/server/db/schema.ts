@@ -110,6 +110,12 @@ export const entries = sqliteTable(
     /** Simplified markdown: bold and links only. */
     body: text("body").notNull().default(""),
     status: text("status", { enum: ENTRY_STATUSES }).notNull().default("draft"),
+    /**
+     * Order among the entries of the same day: higher means later in the day,
+     * so shown higher in the journal (most recent first). A new entry, or one
+     * moved to another day, takes the highest position of its day.
+     */
+    dayPosition: integer("day_position").notNull().default(0),
     /** Photo used as the entry's thumbnail; null means its first photo. */
     coverMediaId: integer("cover_media_id").references((): AnySQLiteColumn => media.id, { onDelete: "set null" }),
     publishedAt: integer("published_at", { mode: "timestamp_ms" }),

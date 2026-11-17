@@ -85,7 +85,7 @@ export async function buildTripExport(db: Db, actor: Actor, trip: Trip, mediaDir
     .from(entries)
     .innerJoin(users, eq(users.id, entries.authorId))
     .where(and(eq(entries.tripId, trip.id), eq(entries.status, "published")))
-    .orderBy(asc(entries.date), asc(entries.id))
+    .orderBy(asc(entries.date), asc(entries.dayPosition), asc(entries.id))
     .all()
     .filter(({ entry }) => canViewEntry(actor, trip, entry));
   const ids = published.map(({ entry }) => entry.id);

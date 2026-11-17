@@ -5,7 +5,7 @@ import { TagList } from "@/components/tags/tag-list";
 import { TripFiltersForm } from "@/components/trips/trip-filters";
 import { Badge } from "@/components/ui/badge";
 import { UnreadDot } from "@/components/ui/unread-dot";
-import { DownloadIcon, MapIcon, PencilIcon, PlusIcon } from "@/components/ui/icons";
+import { DownloadIcon, MapIcon, PencilIcon, PlusIcon, SortIcon } from "@/components/ui/icons";
 import { LinkButton } from "@/components/ui/link-button";
 import { formatDate, formatDateRange } from "@/lib/dates";
 import { mediaUrl, thumbnailUrl } from "@/lib/media-url";
@@ -92,6 +92,12 @@ export default async function TripPage({ params, searchParams }: TripPageProps) 
               <Link href={`/trips/${trip.slug}/edit`} className={manageLink}>
                 <PencilIcon className="size-4" />
                 Modifier le voyage
+              </Link>
+            ) : null}
+            {canManage && options.total > 1 ? (
+              <Link href={`/trips/${trip.slug}/order`} className={manageLink}>
+                <SortIcon className="size-4" />
+                Ordre des entrées
               </Link>
             ) : null}
             {canExport ? (

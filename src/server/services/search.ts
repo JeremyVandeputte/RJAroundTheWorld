@@ -14,6 +14,8 @@ export type SearchResult = {
   tripSlug: string;
   tripTitle: string;
   date: string;
+  /** Order within the day (see entries.dayPosition). */
+  dayPosition: number;
   status: EntryStatus;
   /** Title with the searched words highlighted. */
   title: Segment[];
@@ -80,6 +82,7 @@ export function searchEntries(db: Db, actor: Actor, query: string): SearchOutcom
         tripSlug: trip.slug,
         tripTitle: trip.title,
         date: entry.date,
+        dayPosition: entry.dayPosition,
         status: entry.status,
         title: highlight(entry.title, terms),
         excerpt: body ? excerpt(body, terms) : [],
@@ -87,7 +90,8 @@ export function searchEntries(db: Db, actor: Actor, query: string): SearchOutcom
     }
   }
 
-  found.sort((a, b) => (a.date === b.date ? b.entryId - a.entryId : a.date < b.date ? 1 : -1));
+  // Same order as the journals: most recent day first, then the day's order.
+  found.sort((a, b) => (a.date !== b.date ? (a.date < b.date ? 1 : -1) : b.dayPosition - a.dayPosition || b.entryId - a.entryId));
   return {
     terms,
     total: found.length,

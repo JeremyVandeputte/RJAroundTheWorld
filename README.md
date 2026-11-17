@@ -114,7 +114,7 @@ Toutes les règles d'accès sont dans un seul fichier, `src/server/permissions.t
 | Créer une entrée | si Publier | oui |
 | Modifier, retirer ou supprimer une entrée | les siennes, si Publier | oui |
 | Créer un voyage | si Gérer les voyages | oui |
-| Modifier, masquer ou supprimer un voyage | les siens, si Gérer les voyages | oui |
+| Modifier, masquer ou supprimer un voyage, changer l'ordre de ses entrées | les siens, si Gérer les voyages | oui |
 | Gérer les comptes | non | oui |
 | Statistiques, archive ZIP d'un voyage, tags et photo du site (administration) | si Publier et Gérer les voyages | oui |
 
@@ -144,6 +144,7 @@ Tout ce qui concerne les entrées ne vaut que dans les voyages que la personne p
 - **Texte** : `**gras**` et `[texte du lien](https://…)` uniquement ; une adresse `https://…` collée telle quelle devient aussi un lien. Tout le reste s'affiche tel que saisi : aucun HTML n'est interprété, et seuls les liens `http` et `https` sont cliquables.
 - **Personnes identifiées** : n'importe quels comptes actifs du site.
 - **Tags** (facultatifs) : touchez les tags qui décrivent l'entrée (plage, randonnée…). Un tag absent de la liste se tape dans « Nouveau tag… » puis « Ajouter » ; il est créé à l'enregistrement. Deux noms qui ne diffèrent que par les majuscules ou les accents désignent le même tag. Sur la page de l'entrée, un tag mène au journal du voyage filtré sur ce tag.
+- **Ordre dans la journée** : plusieurs entrées d'un même jour s'affichent par défaut la dernière écrite en premier. « Ordre des entrées », dans le bandeau « Gestion du voyage » (les personnes qui peuvent modifier le voyage), ouvre une page qui liste les entrées jour par jour comme dans le journal : sur les jours qui en ont plusieurs, les flèches ↑ ↓ montent ou descendent une entrée, et chaque appui est enregistré aussitôt. Le journal, Précédente / Suivante, la carte, la recherche et l'archive ZIP suivent cet ordre. Une nouvelle entrée, ou une entrée dont on change la date, se place en tête de son jour ; les brouillons des autres, que l'on ne voit pas, gardent leur place.
 - **Précédente / Suivante** : en bas de la page d'une entrée, deux liens mènent à l'entrée d'avant et d'après, dans l'ordre des jours du voyage (« Précédente » = plus ancienne). Venu d'un journal filtré, on reste dans ce filtre, et le lien de retour vers le voyage le garde.
 
 ### Exporter un voyage
