@@ -6,6 +6,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { ChevronDownIcon, CloseIcon, FilterIcon } from "@/components/ui/icons";
 import { formatDate, formatShortDate } from "@/lib/dates";
 import { filtersToQuery, hasActiveFilters, type TripFilters } from "@/lib/trip-filters";
+import { DayCalendar } from "./day-calendar";
 
 type TripFiltersFormProps = {
   /** Page the filters apply to (journal or map of the trip). */
@@ -21,7 +22,7 @@ const pillOn = "border-accent bg-accent text-white";
 const pillOff = "border-line bg-white text-ink hover:border-accent";
 
 /**
- * Filters by day and by tags: a bar that opens a panel of buttons, and the
+ * Filters by day (a calendar) and by tags: a bar that opens a panel, and the
  * active filters shown as chips that remove themselves when touched. A
  * plain GET form (works without JavaScript); with JavaScript, every change
  * is applied at once and the panel stays open while choosing.
@@ -88,25 +89,12 @@ export function TripFiltersForm({ basePath, days, tags, filters }: TripFiltersFo
             // min-w-0: a fieldset is as wide as its content by default, which widened the page.
             <fieldset className="min-w-0">
               <legend className="text-sm font-medium">Jour</legend>
-              {/* The days wrap onto several lines, like the tags. */}
-              <div className="mt-2 flex flex-wrap gap-2">
-                {["", ...days].map((day) => {
-                  const isChecked = (current.date ?? "") === day;
-                  return (
-                    <label key={day || "all"} title={day ? formatDate(day) : undefined} className={`${pill} ${isChecked ? pillOn : pillOff}`}>
-                      <input
-                        type="radio"
-                        name="jour"
-                        value={day}
-                        checked={isChecked}
-                        onChange={() => apply({ ...current, date: day || null })}
-                        className="sr-only"
-                      />
-                      {day ? formatShortDate(day) : "Tous les jours"}
-                    </label>
-                  );
-                })}
-              </div>
+              <DayCalendar
+                days={days}
+                selected={current.date}
+                onSelect={(date) => apply({ ...current, date })}
+                pillClassName={(isChecked) => `${pill} ${isChecked ? pillOn : pillOff}`}
+              />
             </fieldset>
           ) : null}
 

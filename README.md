@@ -166,7 +166,7 @@ L'archive contient les entrées publiées (jamais les brouillons). L'archive est
 
 Le journal et la carte d'un voyage ont une barre « Filtrer par jour ou par tag », qui ouvre un panneau ; une pastille y indique le nombre de filtres actifs.
 
-- **Jour** : des boutons, un par jour qui a des entrées (ils passent à la ligne comme les tags pour un long voyage), plus « Tous les jours ».
+- **Jour** : un calendrier, un mois à la fois (flèches pour changer de mois), du mois de la première entrée à celui de la dernière ; il s'ouvre sur le mois le plus récent, ou sur celui du jour choisi. Les jours qui ont au moins une entrée sont marqués d'un rond et d'un point et peuvent être choisis ; les autres sont grisés. Toucher à nouveau le jour choisi, ou « Tous les jours », retire le filtre.
 - **Tags** : un ou plusieurs ; une entrée est gardée si elle a au moins un des tags choisis.
 - Les filtres s'appliquent dès qu'on les touche, le panneau restant ouvert pour en choisir plusieurs. Ils s'affichent dans l'adresse de la page (`?jour=2026-11-14&tags=plage,randonnee`) et passent du journal à la carte : une vue filtrée peut être rechargée ou envoyée à quelqu'un.
 - Les filtres actifs apparaissent sous la barre, même panneau fermé : toucher l'un d'eux le retire ; « Tout effacer » revient à toutes les entrées.
