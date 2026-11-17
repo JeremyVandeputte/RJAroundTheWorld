@@ -132,6 +132,7 @@ Tout ce qui concerne les entrées ne vaut que dans les voyages que la personne p
 - Seuls l'auteur du voyage (s'il a toujours Gérer les voyages) et le superuser peuvent le modifier, changer sa visibilité ou le supprimer. La suppression emporte toutes ses entrées, y compris celles écrites par d'autres, avec leurs photos et vidéos.
 - Si le compte de l'auteur est supprimé, le voyage reste et seul le superuser peut le gérer.
 - L'adresse d'un voyage est construite à partir de son titre à la création et ne change plus ensuite.
+- **Description** (facultative) : sans limite de longueur ; affichée en entier sur l'accueil et en tête du journal, retours à la ligne conservés.
 
 ### Entrées
 
@@ -143,6 +144,7 @@ Tout ce qui concerne les entrées ne vaut que dans les voyages que la personne p
 - **Texte** : `**gras**` et `[texte du lien](https://…)` uniquement ; une adresse `https://…` collée telle quelle devient aussi un lien. Tout le reste s'affiche tel que saisi : aucun HTML n'est interprété, et seuls les liens `http` et `https` sont cliquables.
 - **Personnes identifiées** : n'importe quels comptes actifs du site.
 - **Tags** (facultatifs) : touchez les tags qui décrivent l'entrée (plage, randonnée…). Un tag absent de la liste se tape dans « Nouveau tag… » puis « Ajouter » ; il est créé à l'enregistrement. Deux noms qui ne diffèrent que par les majuscules ou les accents désignent le même tag. Sur la page de l'entrée, un tag mène au journal du voyage filtré sur ce tag.
+- **Précédente / Suivante** : en bas de la page d'une entrée, deux liens mènent à l'entrée d'avant et d'après, dans l'ordre des jours du voyage (« Précédente » = plus ancienne). Venu d'un journal filtré, on reste dans ce filtre, et le lien de retour vers le voyage le garde.
 
 ### Exporter un voyage
 

@@ -130,7 +130,8 @@ export default async function TripPage({ params, searchParams }: TripPageProps) 
             {entries.map((entry) => (
               <li key={entry.id}>
                 <Link
-                  href={`/trips/${trip.slug}/entries/${entry.id}`}
+                  // The filters go along, so the entry's previous/next links stay within them.
+                  href={`/trips/${trip.slug}/entries/${entry.id}${filtersToQuery(filters)}`}
                   className="flex items-center gap-3 rounded-md border border-line bg-white px-4 py-3 hover:border-accent/50"
                 >
                   <span className="min-w-0 flex-1">

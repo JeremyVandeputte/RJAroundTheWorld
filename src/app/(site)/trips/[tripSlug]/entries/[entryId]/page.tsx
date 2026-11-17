@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MarkAsRead } from "@/components/entry/mark-as-read";
+import { EntryPager } from "@/components/entry/entry-pager";
 import { MediaGallery } from "@/components/entry/media-gallery";
 import { RichText } from "@/components/entry/rich-text";
 import { TripMap } from "@/components/map/trip-map";
@@ -13,9 +14,15 @@ import { formatDate } from "@/lib/dates";
 import { getDb } from "@/server/db/client";
 import { loadEntry } from "@/server/page-data";
 import { canEditEntry, canManageJournal } from "@/server/permissions";
+import { filtersToQuery, parseTripFilters } from "@/lib/trip-filters";
+import { findEntryNeighbours } from "@/server/services/entries";
 import { listEntryMedia } from "@/server/services/media";
 
-type EntryPageProps = { params: Promise<{ tripSlug: string; entryId: string }> };
+type EntryPageProps = {
+  params: Promise<{ tripSlug: string; entryId: string }>;
+  /** The journal's filters, kept when browsing from entry to entry. */
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
 
 export async function generateMetadata({ params }: EntryPageProps): Promise<Metadata> {
   const { tripSlug, entryId } = await params;
@@ -30,9 +37,11 @@ function placeLabel(name: string | null, fallback: string): string {
   return name?.trim() || fallback;
 }
 
-export default async function EntryPage({ params }: EntryPageProps) {
+export default async function EntryPage({ params, searchParams }: EntryPageProps) {
   const { tripSlug, entryId } = await params;
   const { viewer, trip, detail } = await loadEntry(tripSlug, entryId);
+  const filters = parseTripFilters(await searchParams);
+  const query = filtersToQuery(filters);
   if (!trip || !detail) notFound();
   const { entry, author, people } = detail;
 
@@ -45,7 +54,7 @@ export default async function EntryPage({ params }: EntryPageProps) {
   return (
     <article className="space-y-6">
       <header>
-        <Link href={`/trips/${trip.slug}`} className="text-sm text-accent underline-offset-4 hover:underline">
+        <Link href={`/trips/${trip.slug}${query}`} className="text-sm text-accent underline-offset-4 hover:underline">
           ← {trip.title}
         </Link>
         <p className="mt-3 text-sm text-muted">{formatDate(entry.date)}</p>
@@ -106,6 +115,11 @@ export default async function EntryPage({ params }: EntryPageProps) {
       ) : null}
 
       <MarkAsRead entryId={entry.id} />
+
+      <EntryPager
+        hrefOf={(id) => `/trips/${trip.slug}/entries/${id}${query}`}
+        {...findEntryNeighbours(getDb(), viewer, trip, entry.id, filters)}
+      />
 
       {canEdit || showReads ? (
         <div className="flex flex-wrap gap-3 border-t border-line pt-4">

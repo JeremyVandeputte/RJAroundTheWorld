@@ -81,6 +81,31 @@ export function listEntries(db: Db, actor: Actor, trip: Trip, filters: TripFilte
     .filter((entry) => matchesFilters(filters, { date: entry.date, tagSlugs: entry.tags.map((tag) => tag.slug) }));
 }
 
+export type EntryNeighbour = Pick<EntryListItem, "id" | "title" | "date">;
+
+/**
+ * The entries around this one in the trip's journal, as the actor sees it
+ * (with the same filters when given): `previous` happened before it,
+ * `next` after it. The journal lists the most recent first, so `next` is the
+ * one above it in the list.
+ */
+export function findEntryNeighbours(
+  db: Db,
+  actor: Actor,
+  trip: Trip,
+  entryId: number,
+  filters: TripFilters = NO_FILTERS,
+): { previous: EntryNeighbour | null; next: EntryNeighbour | null } {
+  let list = listEntries(db, actor, trip, filters);
+  // Opened outside the filters (a link sent by someone): browse the whole journal.
+  if (!list.some((entry) => entry.id === entryId)) list = listEntries(db, actor, trip);
+  const index = list.findIndex((entry) => entry.id === entryId);
+  if (index === -1) return { previous: null, next: null };
+  const pick = (entry: EntryListItem | undefined): EntryNeighbour | null =>
+    entry ? { id: entry.id, title: entry.title, date: entry.date } : null;
+  return { previous: pick(list[index + 1]), next: pick(list[index - 1]) };
+}
+
 export type TripFilterOptions = {
   /** Days that have at least one entry the actor can see, most recent first. */
   days: string[];
