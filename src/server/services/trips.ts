@@ -9,7 +9,6 @@ import { notifyTripRevealed } from "./notifications";
 export type Trip = typeof trips.$inferSelect;
 
 export const TRIP_TITLE_MAX_LENGTH = 100;
-export const TRIP_DESCRIPTION_MAX_LENGTH = 500;
 
 export type TripInput = {
   title: string;
@@ -19,7 +18,7 @@ export type TripInput = {
   isVisible: boolean;
 };
 
-export type TripIssue = "invalid_title" | "invalid_description" | "invalid_dates" | "end_before_start" | "cover_required";
+export type TripIssue = "invalid_title" | "invalid_dates" | "end_before_start" | "cover_required";
 
 /** Slugs that would collide with fixed routes under /trips/. */
 const RESERVED_SLUGS = new Set(["new"]);
@@ -59,7 +58,7 @@ export function countTripEntries(db: Db, tripId: number): number {
 function validate(input: TripInput): TripIssue | null {
   const title = input.title.trim();
   if (title.length === 0 || title.length > TRIP_TITLE_MAX_LENGTH) return "invalid_title";
-  if (input.description.trim().length > TRIP_DESCRIPTION_MAX_LENGTH) return "invalid_description";
+  // The description has no length limit: the trip page shows it in full.
   if (!isValidDateString(input.startDate) || !isValidDateString(input.endDate)) return "invalid_dates";
   if (input.endDate < input.startDate) return "end_before_start";
   return null;

@@ -27,11 +27,11 @@ export function TripForm({ trip }: TripFormProps) {
       {trip ? <input type="hidden" name="tripId" value={trip.id} /> : null}
       <TextField label="Titre" name="title" type="text" defaultValue={trip?.title} maxLength={100} required />
       <TextareaField
-        label="Description courte"
+        label="Description"
         name="description"
         defaultValue={trip?.description}
-        maxLength={500}
-        rows={3}
+        rows={6}
+        hint="Facultative et sans limite de longueur. Les retours à la ligne sont conservés."
       />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <TextField label="Date de début" name="startDate" type="date" defaultValue={trip?.startDate} required />

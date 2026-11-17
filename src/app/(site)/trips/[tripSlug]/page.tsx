@@ -67,7 +67,7 @@ export default async function TripPage({ params, searchParams }: TripPageProps) 
           {!trip.isVisible ? <Badge tone="warning">Non visible</Badge> : null}
         </div>
         <p className="mt-1 text-sm text-muted">{formatDateRange(trip.startDate, trip.endDate)}</p>
-        {trip.description ? <p className="mt-3">{trip.description}</p> : null}
+        {trip.description ? <p className="mt-3 whitespace-pre-line">{trip.description}</p> : null}
       </div>
 
       {/* Everyday actions first, as large buttons; managing the trip apart, below. */}

@@ -82,7 +82,8 @@ describe("creating trips", () => {
     const attempt = (overrides: object) => createTrip(db, cast.superuser, hiddenInput(overrides));
     expect(attempt({ title: "  " })).toEqual({ ok: false, reason: "invalid_title" });
     expect(attempt({ title: "x".repeat(101) })).toEqual({ ok: false, reason: "invalid_title" });
-    expect(attempt({ description: "x".repeat(501) })).toEqual({ ok: false, reason: "invalid_description" });
+    // The description has no length limit.
+    expect(attempt({ description: "Une longue description.\n".repeat(400) }).ok).toBe(true);
     expect(attempt({ startDate: "2026-02-30" })).toEqual({ ok: false, reason: "invalid_dates" });
     expect(attempt({ startDate: "2026-11-02", endDate: "2026-11-01" })).toEqual({ ok: false, reason: "end_before_start" });
     expect(attempt({ startDate: "2026-11-01", endDate: "2026-11-01" }).ok).toBe(true);

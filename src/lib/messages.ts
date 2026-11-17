@@ -33,7 +33,6 @@ export const messages = {
     forbidden: "Vous n'avez pas le droit de créer ou de modifier ce voyage.",
     trip_not_found: "Ce voyage n'existe pas.",
     invalid_title: "Le titre du voyage doit contenir entre 1 et 100 caractères.",
-    invalid_description: "La description ne doit pas dépasser 500 caractères.",
     invalid_dates: "Indiquez une date de début et une date de fin valides.",
     end_before_start: "La date de fin ne peut pas précéder la date de début.",
     cover_required: "Ajoutez d'abord une miniature au voyage (plus bas sur cette page) avant de le rendre visible.",

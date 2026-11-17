@@ -83,7 +83,7 @@ export default async function HomePage() {
                     {unread.get(trip.id)} nouvelle{unread.get(trip.id)! > 1 ? "s" : ""} entrée{unread.get(trip.id)! > 1 ? "s" : ""} à lire
                   </span>
                 ) : null}
-                {trip.description ? <span className="mt-2 block">{trip.description}</span> : null}
+                {trip.description ? <span className="mt-2 block whitespace-pre-line">{trip.description}</span> : null}
                 </span>
               </Link>
             </li>
