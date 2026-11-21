@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { BellIcon } from "@/components/ui/icons";
 import { confirmSubscription, currentSubscription, isStandalone, pushSupport, setAppBadge, turnOn } from "@/lib/push-client";
+import { nextInviteRecord, parseInviteRecord, shouldInvite, type InviteRecord } from "@/lib/push-invite";
 
 const INVITE_KEY = "rjatw-push-invite";
 const button = "inline-flex min-h-11 items-center justify-center rounded-md px-4 py-2 text-base font-medium transition-colors";
@@ -11,7 +12,8 @@ const button = "inline-flex min-h-11 items-center justify-center rounded-md px-4
  * On every page, for a logged-in person: keeps this device's phone
  * notifications in step with the server, shows the number of unread
  * notifications on the application's icon, and in the installed application
- * invites once to turn notifications on.
+ * invites to turn notifications on (again a week after "Plus tard", three
+ * times at most: a refusal in the system's own request could not be undone).
  */
 export function PushDevice({ publicKey, userId, unread }: { publicKey: string | null; userId: number; unread: number }) {
   const [invite, setInvite] = useState<"hidden" | "shown" | "working" | "done">("hidden");
@@ -24,21 +26,25 @@ export function PushDevice({ publicKey, userId, unread }: { publicKey: string | 
     if (!publicKey) return;
     confirmSubscription(publicKey, userId).catch(() => {});
     (async () => {
-      let alreadyAsked = false;
-      try {
-        alreadyAsked = localStorage.getItem(INVITE_KEY) !== null;
-      } catch {
-        // Storage blocked: the invitation is shown, at worst once per opening.
-      }
-      if (alreadyAsked || !isStandalone() || pushSupport() !== "supported" || Notification.permission !== "default") return;
+      if (!shouldInvite(readRecord()) || !isStandalone() || pushSupport() !== "supported" || Notification.permission !== "default") return;
       if (await currentSubscription().catch(() => null)) return;
+      writeRecord(nextInviteRecord(readRecord(), "shown"));
       setInvite("shown");
     })();
   }, [publicKey, userId]);
 
-  function remember() {
+  function readRecord(): InviteRecord | null {
     try {
-      localStorage.setItem(INVITE_KEY, new Date().toISOString());
+      return parseInviteRecord(localStorage.getItem(INVITE_KEY));
+    } catch {
+      // Storage blocked: the invitation is shown, at worst once per opening.
+      return null;
+    }
+  }
+
+  function writeRecord(record: InviteRecord) {
+    try {
+      localStorage.setItem(INVITE_KEY, JSON.stringify(record));
     } catch {
       // Nothing to do.
     }
@@ -47,7 +53,7 @@ export function PushDevice({ publicKey, userId, unread }: { publicKey: string | 
   async function accept() {
     if (!publicKey) return;
     setInvite("working");
-    remember();
+    writeRecord(nextInviteRecord(readRecord(), "accepted"));
     const outcome = await turnOn(publicKey, userId);
     setInvite(outcome === "on" ? "done" : "hidden");
     if (outcome === "on") setTimeout(() => setInvite("hidden"), 3000);
@@ -81,10 +87,8 @@ export function PushDevice({ publicKey, userId, unread }: { publicKey: string | 
             </button>
             <button
               type="button"
-              onClick={() => {
-                remember();
-                setInvite("hidden");
-              }}
+              // Counted when shown: it comes back in a week, unless it was the last time.
+              onClick={() => setInvite("hidden")}
               className={`${button} border border-line bg-white text-ink hover:bg-paper`}
             >
               Plus tard
