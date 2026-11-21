@@ -1,5 +1,6 @@
 import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import type { Db } from "@/server/db/client";
+import { describeNotification } from "@/lib/notification-text";
 import { entries, entryPeople, notifications, trips, users, type NotificationType } from "@/server/db/schema";
 import {
   canBeNotifiedAbout,
@@ -243,4 +244,62 @@ export function markAllNotificationsRead(db: Db, viewer: Actor, now = new Date()
     .set({ readAt: now })
     .where(and(eq(notifications.recipientId, viewer.id), isNull(notifications.readAt)))
     .run().changes;
+}
+
+// --- Phone notifications -----------------------------------------------------------
+
+/** What a phone shows for a notification: same sentence as on the site. */
+export type PushMessage = {
+  recipientId: number;
+  /** Shown in bold: the trip it is about. */
+  title: string;
+  body: string;
+  /** Opens what it is about, marking the notification as read. */
+  url: string;
+  /** One phone notification per site notification. */
+  tag: string;
+  /** Unread notifications of the recipient, for the number on the app icon. */
+  unread: number;
+};
+
+/** Oldest age of a notification still worth sending to a phone. */
+const PUSH_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Takes the notifications not yet handed to the phone step (each is taken
+ * only once) and returns the messages to send: only to active people who may
+ * still see what it is about, and never for old ones (server stopped meanwhile).
+ */
+export function takePendingPushMessages(db: Db, now = new Date()): PushMessage[] {
+  const pending = db.transaction((tx) => {
+    const rows = tx
+      .select({ id: notifications.id, recipientId: notifications.recipientId, createdAt: notifications.createdAt })
+      .from(notifications)
+      .where(isNull(notifications.pushedAt))
+      .all();
+    if (rows.length > 0) {
+      tx.update(notifications).set({ pushedAt: now }).where(inArray(notifications.id, rows.map((row) => row.id))).run();
+    }
+    return rows.filter((row) => now.getTime() - row.createdAt.getTime() <= PUSH_MAX_AGE_MS);
+  });
+
+  const messages: PushMessage[] = [];
+  const recipients = new Map(loadUsers(db, pending.map((row) => row.recipientId)).map((user) => [user.id, user]));
+  for (const { id, recipientId } of pending) {
+    const recipient = recipients.get(recipientId);
+    if (!recipient) continue;
+    const row = visibleNotifications(db, recipient, { id })[0];
+    // Deactivated meanwhile, trip hidden again, entry withdrawn: nothing is sent.
+    if (!row) continue;
+    const view = toView(row, recipient);
+    messages.push({
+      recipientId,
+      title: view.tripTitle,
+      body: describeNotification(view),
+      url: `/notifications/${id}/open`,
+      tag: `notification-${id}`,
+      unread: countUnreadNotifications(db, recipient),
+    });
+  }
+  return messages;
 }

@@ -85,6 +85,13 @@
       "when": 1794926480593,
       "tag": "0011_entry_day_position",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1795220421679,
+      "tag": "0012_push_notifications",
+      "breakpoints": true
     }
   ]
 }

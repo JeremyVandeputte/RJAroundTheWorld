@@ -6,6 +6,7 @@ import { messages } from "@/lib/messages";
 import { getEnv } from "@/lib/env";
 import { getCurrentUser } from "@/server/auth/current-user";
 import { getDb } from "@/server/db/client";
+import { schedulePushDispatch } from "@/server/push/dispatch";
 import { removeEntryDirs, removeTripDir } from "@/server/media/storage";
 import { createTrip, deleteTrip, updateTrip, type TripInput } from "@/server/services/trips";
 import { formBoolean, formId, formString, type FormState } from "./form-state";
@@ -30,6 +31,8 @@ export async function saveTripAction(_previous: FormState, formData: FormData): 
 
   const result = tripId === null ? createTrip(getDb(), actor, input) : updateTrip(getDb(), actor, tripId, input);
   if (!result.ok) return { error: messages.trip[result.reason] };
+  // Publishing an entry or showing a trip notifies people: on their phones too.
+  schedulePushDispatch();
 
   revalidatePath("/", "layout");
   // A new trip goes straight to its thumbnail, needed before it can be made visible.

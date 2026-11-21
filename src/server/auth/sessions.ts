@@ -73,6 +73,12 @@ export function getSessionUser(db: Db, token: string, config: SessionConfig, now
   return toSessionUser(user);
 }
 
+/** Id of the (still valid) session behind a token: phone notifications are tied to it. */
+export function findSessionId(db: Db, token: string, config: SessionConfig, now = new Date()): number | null {
+  const row = db.select({ id: sessions.id, expiresAt: sessions.expiresAt }).from(sessions).where(eq(sessions.tokenHash, hashSessionToken(token, config))).get();
+  return row && row.expiresAt.getTime() > now.getTime() ? row.id : null;
+}
+
 export function deleteSession(db: Db, token: string, config: SessionConfig): void {
   db.delete(sessions).where(eq(sessions.tokenHash, hashSessionToken(token, config))).run();
 }

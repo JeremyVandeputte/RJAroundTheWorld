@@ -4,7 +4,7 @@ import { cache } from "react";
 import { getEnv } from "@/lib/env";
 import { getDb } from "@/server/db/client";
 import { cookieNames, cookieOptions } from "./cookies";
-import { deleteSession, getSessionUser, type SessionUser } from "./sessions";
+import { deleteSession, findSessionId, getSessionUser, type SessionUser } from "./sessions";
 
 /**
  * User of the current request, or null for an anonymous visitor.
@@ -15,6 +15,13 @@ export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
   const token = (await cookies()).get(cookieNames(env).session)?.value;
   return token ? getSessionUser(getDb(), token, env) : null;
 });
+
+/** Id of the current session, for what belongs to one device (phone notifications). */
+export async function getCurrentSessionId(): Promise<number | null> {
+  const env = getEnv();
+  const token = (await cookies()).get(cookieNames(env).session)?.value;
+  return token ? findSessionId(getDb(), token, env) : null;
+}
 
 /**
  * Viewer of a page. Every page requires an account: an anonymous visitor is

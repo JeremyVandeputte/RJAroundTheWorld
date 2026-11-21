@@ -6,6 +6,7 @@ import { messages } from "@/lib/messages";
 import { getEnv } from "@/lib/env";
 import { getCurrentUser } from "@/server/auth/current-user";
 import { getDb } from "@/server/db/client";
+import { schedulePushDispatch } from "@/server/push/dispatch";
 import { removeEntryDirs } from "@/server/media/storage";
 import {
   createEntry,
@@ -73,6 +74,8 @@ export async function saveEntryAction(_previous: FormState, formData: FormData):
     return { error: messages.entry.not_found };
   }
   if (!result.ok) return { error: messages.entry[result.reason] };
+  // Publishing an entry or showing a trip notifies people: on their phones too.
+  schedulePushDispatch();
 
   revalidatePath("/", "layout");
   const entryPath = `/trips/${result.trip.slug}/entries/${result.entry.id}`;

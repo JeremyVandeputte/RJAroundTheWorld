@@ -190,6 +190,8 @@ rjatw$ node -e "console.log(require('crypto').randomBytes(32).toString('base64ur
 
 **Ne réutilisez pas les secrets de votre `.env` local** : ceux de la production ne doivent exister que sur le serveur (et dans votre gestionnaire de mots de passe).
 
+Pour les **notifications sur les téléphones**, il faut aussi une paire de clés. Elle se génère une fois le code installé (étape 6) avec `npm run push:keys` : notez simplement que les lignes `VAPID_…` du `.env` seront à remplir à ce moment-là.
+
 ### 5.2 Écrire le fichier `.env`
 
 ```bash
@@ -216,6 +218,12 @@ MEDIA_QUOTA_GB=30
 
 # Laisser vide pour ne pas convertir les vidéos.
 FFMPEG_PATH=/usr/bin/ffmpeg
+
+# Notifications sur les téléphones : clés données par `npm run push:keys` (étape 6).
+# Laisser vide pour ne pas proposer les notifications sur les téléphones.
+VAPID_PUBLIC_KEY=
+VAPID_PRIVATE_KEY=
+VAPID_SUBJECT=
 
 SESSION_DAYS=30
 
@@ -258,6 +266,16 @@ rjatw$ ls -la /var/lib/rjaroundtheworld/
 ```
 
 `rjaroundtheworld.db` doit y apparaître.
+
+Générez enfin les clés des notifications sur les téléphones :
+
+```bash
+rjatw$ npm run push:keys
+```
+
+La commande affiche deux lignes `VAPID_PUBLIC_KEY=…` et `VAPID_PRIVATE_KEY=…` : copiez-les dans `.env` (`nano .env`) à la place des lignes vides. Gardez-les : si elles changent plus tard, chaque téléphone se réabonne tout seul à sa prochaine ouverture du site, mais les notifications n'arrivent plus d'ici là. `VAPID_SUBJECT` peut rester vide (l'adresse du site est alors donnée comme contact aux services d'Apple et de Google).
+
+Les notifications passent, chiffrées, par le service du fabricant de chaque appareil (Apple, Google, Mozilla, Microsoft) : le serveur doit pouvoir les joindre en HTTPS sortant, ce qui est le cas par défaut (le pare-feu de l'étape 3.3 ne filtre que l'entrant).
 
 ## 7. HTTPS avec Caddy
 
@@ -500,6 +518,7 @@ Changer `ACCESS_TOKEN` dans `.env` (puis redémarrer) invalide l'ancien lien pou
 | `npm run build` s'arrête sans message ou « Killed » | Mémoire insuffisante : ajouter un fichier d'échange (étape 3.4). |
 | Les vidéos ne se convertissent pas | `FFMPEG_PATH` vide ou incorrect (`which ffmpeg`), ou ffmpeg en erreur : la raison est dans `journalctl -u rjaroundtheworld`. L'original reste lisible en attendant. |
 | Les envois de photos échouent toujours | Un proxy entre le visiteur et Caddy limite la taille des requêtes ; avec nginx, vérifier `client_max_body_size 10m` (annexe). |
+| Les notifications n'arrivent pas sur les téléphones | Vérifier que `VAPID_PUBLIC_KEY` et `VAPID_PRIVATE_KEY` sont remplies et que le site a été redémarré, puis, sur le téléphone : « Profil » → « Envoyer une notification d'essai ». Sur iPhone, il faut iOS 16.4 ou plus et ouvrir le site depuis l'application installée sur l'écran d'accueil. Une erreur d'envoi apparaît dans `journalctl -u rjaroundtheworld` (« Phone notifications could not be sent »). |
 | « Database is locked » dans les journaux | Deux copies du site tournent sur la même base (un `npm start` lancé à la main en plus du service). N'utiliser que le service systemd. |
 
 ## Annexe : nginx à la place de Caddy

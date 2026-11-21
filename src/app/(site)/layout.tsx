@@ -2,6 +2,8 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { InfoIcon } from "@/components/ui/icons";
 import { SiteHeader } from "@/components/layout/site-header";
+import { PushDevice } from "@/components/push/push-device";
+import { getEnv } from "@/lib/env";
 import { getCurrentUser } from "@/server/auth/current-user";
 import { getDb } from "@/server/db/client";
 import { countUnreadNotifications } from "@/server/services/notifications";
@@ -19,6 +21,7 @@ export default async function SiteLayout({ children }: { children: ReactNode }) 
     <>
       <SiteHeader user={user} unreadNotifications={unread} photoUrl={sitePhotoUrl(getSitePhotoVersion(getDb()), "nav")} />
       <main className="mx-auto max-w-3xl px-4 py-6">{children}</main>
+      {user && unread !== null ? <PushDevice publicKey={getEnv().push?.publicKey ?? null} userId={user.id} unread={unread} /> : null}
       {unread !== null ? (
         <footer className="mx-auto max-w-3xl border-t border-line px-4 pt-4 pb-8 text-sm">
           <Link href="/about" className="inline-flex min-h-11 items-center gap-1.5 text-accent underline-offset-4 hover:underline">

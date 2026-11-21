@@ -1,8 +1,9 @@
 // Service worker of the installed application.
 //
 // It caches nothing: pages and photos are private and always come from the
-// server. Its only role is to show a clear French page, instead of the
-// browser's error, when a page is opened without any connection.
+// server. It shows a clear French page, instead of the browser's error, when a
+// page is opened without any connection, and it shows the notifications sent
+// to this device (turned on from the profile page).
 
 const OFFLINE_PAGE = `<!doctype html>
 <html lang="fr">
@@ -50,5 +51,57 @@ self.addEventListener("fetch", (event) => {
           headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" },
         }),
     ),
+  );
+});
+
+// --- Phone notifications ------------------------------------------------------
+// The server sends { title, body, url, tag, badge } (src/server/services/push.ts).
+
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    // Not ours or damaged: a plain notification is still shown (Apple requires one).
+  }
+  const badge = typeof data.badge === "number" ? data.badge : -1;
+  const updateBadge = () => {
+    // Number of unread notifications on the application's icon, where supported.
+    if (badge < 0 || !self.navigator.setAppBadge) return Promise.resolve();
+    return (badge > 0 ? self.navigator.setAppBadge(badge) : self.navigator.clearAppBadge()).catch(() => {});
+  };
+  event.waitUntil(
+    Promise.all([
+      self.registration.showNotification(data.title || "RJ Around The World", {
+        body: data.body || "Nouvelle notification",
+        icon: "/icons/icon-192.png",
+        tag: data.tag || undefined,
+        lang: "fr",
+        data: { url: typeof data.url === "string" && data.url.startsWith("/") ? data.url : "/notifications" },
+      }),
+      updateBadge(),
+    ]),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = new URL(event.notification.data?.url || "/notifications", self.location.origin).href;
+  event.waitUntil(
+    (async () => {
+      // The application already open comes to the front on that page; otherwise it opens.
+      const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      for (const client of windows) {
+        if (new URL(client.url).origin !== self.location.origin) continue;
+        try {
+          await client.focus();
+          if ("navigate" in client) await client.navigate(url);
+          return;
+        } catch {
+          // Not controlled by this worker: open a new window instead.
+        }
+      }
+      await self.clients.openWindow(url);
+    })(),
   );
 });

@@ -69,6 +69,8 @@ Toute la configuration passe par des variables d'environnement (fichier `.env` e
 | `MAX_VIDEO_MB` | non | `300` | Taille maximale d'une vidéo, en Mo. |
 | `FFMPEG_PATH` | non | vide | Programme ffmpeg qui convertit les vidéos après l'envoi (voir « Photos et vidéos »). Vide : les vidéos restent telles qu'envoyées. |
 | `MEDIA_QUOTA_GB` | non | `30` | Espace total réservé aux photos et vidéos, en Go. |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | non | vides | Clés des notifications sur les téléphones, générées une fois avec `npm run push:keys` (les deux ou aucune). Vides : les notifications restent sur le site uniquement. |
+| `VAPID_SUBJECT` | non | `APP_URL` | Contact donné aux services de notification d'Apple, Google, Mozilla et Microsoft (`https://…` ou `mailto:…`). |
 | `SESSION_DAYS` | non | `30` | Durée d'une session sans visite, en jours. |
 | `TRUST_PROXY` | non | `false` | `true` derrière un reverse proxy qui ajoute l'adresse du visiteur à `X-Forwarded-For` (sert à l'anti brute force). |
 | `DEV_ALLOWED_ORIGINS` | non | | Développement uniquement : adresses autorisées à utiliser `npm run dev` depuis un autre appareil (voir [Tester depuis un téléphone](#tester-depuis-un-téléphone)). |
@@ -208,7 +210,7 @@ Lien « À propos » en bas de chaque page (une fois connecté), page `/about` :
 
 ### Notifications
 
-La cloche de l'en-tête indique le nombre de notifications non lues et mène à la page « Notifications ». Ni temps réel ni e-mail : elles apparaissent au chargement d'une page.
+La cloche de l'en-tête indique le nombre de notifications non lues et mène à la page « Notifications ». Sur le site, elles apparaissent au chargement d'une page ; elles peuvent aussi arriver sur les téléphones (voir « Notifications sur les téléphones »). Pas d'e-mail.
 
 | Événement | Qui est notifié |
 |---|---|
@@ -220,6 +222,17 @@ La cloche de l'en-tête indique le nombre de notifications non lues et mène à 
 - Pas de doublon : retirer puis republier une entrée ne renotifie pas.
 - Une notification disparaît si son objet n'est plus visible (voyage masqué, entrée retirée, personne retirée de l'entrée) et réapparaît s'il le redevient.
 - Toucher une notification mène à l'entrée ou au voyage concerné et la marque comme lue. « Marquer comme lue » et « Tout marquer comme lu » marquent sans quitter la page. Les 100 plus récentes sont affichées.
+
+### Notifications sur les téléphones
+
+Avec les clés `VAPID_…` configurées, chaque notification du site est aussi envoyée aux appareils où la personne les a activées : elle s'affiche comme celle d'une application, même application fermée, avec le voyage en titre et la même phrase que sur le site. La toucher ouvre l'entrée ou le voyage et la marque comme lue.
+
+- **Activer** : « Profil » → « Notifications sur cet appareil » → « Activer les notifications sur cet appareil », puis accepter la demande du téléphone. Dans l'application installée, une invitation le propose aussi une fois (« Activer » ou « Plus tard »). L'activation vaut pour cet appareil seulement ; « Envoyer une notification d'essai » permet de vérifier, « Désactiver » d'arrêter.
+- **iPhone / iPad** : iOS 16.4 ou plus, et **uniquement dans l'application installée** sur l'écran d'accueil (dans Safari, le profil explique comment l'installer). **Android** et **ordinateurs** : dans le navigateur comme dans l'application installée.
+- **Pastille sur l'icône** : là où l'appareil le permet (application installée), l'icône affiche le nombre de notifications non lues, mis à jour à chaque notification reçue et à chaque ouverture du site.
+- **Déconnexion** : se déconnecter d'un appareil (ou changer son mot de passe, ce qui déconnecte partout) arrête ses notifications. Si quelqu'un d'autre se connecte ensuite sur cet appareil, il ne les reçoit pas : il doit les activer lui-même.
+- **Ce qui est envoyé** : uniquement les nouvelles notifications (pas celles d'avant l'activation, ni celles de plus de 24 heures si le serveur était arrêté) et seulement si leur objet est toujours visible pour la personne. Un appareil désinstallé, ou dont les notifications ont été refusées dans les réglages, est oublié au premier envoi refusé.
+- **Vie privée** : le message transite par le service de notification du fabricant de l'appareil (Apple, Google, Mozilla ou Microsoft), **chiffré pour ce seul appareil** : ces services ne voient ni le texte ni le voyage, seulement l'heure et l'appareil destinataire. Le serveur n'envoie rien à une autre adresse que ces services. C'est la seule communication du site avec un service tiers, en dehors des fonds de carte OpenStreetMap.
 
 ### Connexion instable
 
@@ -265,7 +278,7 @@ Si le téléphone n'atteint pas le site, le pare-feu de l'ordinateur bloque prob
 
 - Toutes les saisies sont validées côté serveur. Les textes sont affichés comme du texte ; le seul balisage interprété est le gras et les liens `http`/`https` des entrées.
 - Les fichiers ne sont jamais servis par une adresse publique : `/api/media/<identifiant aléatoire>` applique les mêmes règles que la page de l'entrée, et répond 404 dans tous les autres cas. Le type d'un fichier est déterminé par son contenu, jamais par son nom.
-- Le service worker (`public/sw.js`), qui affiche la page « Pas de connexion », ne met rien en cache : pages, photos et vidéos viennent toujours du serveur, avec les mêmes contrôles d'accès. Le manifeste, les icônes et le service worker ne sont servis qu'avec le cookie du lien secret.
+- Le service worker (`public/sw.js`), qui affiche la page « Pas de connexion » et les notifications reçues sur l'appareil, ne met rien en cache : pages, photos et vidéos viennent toujours du serveur, avec les mêmes contrôles d'accès. Le manifeste, les icônes et le service worker ne sont servis qu'avec le cookie du lien secret.
 - Le brouillon local d'une entrée reste dans le navigateur de l'appareil (`localStorage`) jusqu'à l'enregistrement ou « Les ignorer » ; il n'est pas effacé à la déconnexion. Sur un appareil partagé, enregistrer ou ignorer ses brouillons avant de le prêter.
 - Un voyage masqué, un brouillon ou une entrée retirée ne fuient nulle part : listes, carte, notifications, adresses directes et fichiers répondent comme s'ils n'existaient pas.
 
@@ -277,7 +290,8 @@ Si le téléphone n'atteint pas le site, le pare-feu de l'ordinateur bloque prob
 
 ### Données envoyées à l'extérieur
 
-- **Fonds de carte** : c'est le seul appel vers un tiers. OpenStreetMap reçoit la zone affichée et le nom de domaine du site, jamais l'adresse de la page.
+- **Fonds de carte** : c'est le seul appel du navigateur vers un tiers. OpenStreetMap reçoit la zone affichée et le nom de domaine du site, jamais l'adresse de la page.
+- **Notifications sur les téléphones** (si les clés `VAPID_…` sont configurées) : le serveur envoie chaque notification, chiffrée pour l'appareil destinataire, au service de notification de son fabricant (Apple, Google, Mozilla ou Microsoft), et à aucune autre adresse ; ces services ne peuvent pas lire le contenu (voir « Notifications sur les téléphones »).
 - **Télémétrie de Next.js** : désactivée.
 - **Registre npm** : en développement et à la compilation, Next.js l'interroge pour connaître sa dernière version, sans transmettre aucune donnée du site.
 - **En production**, le serveur n'émet aucune requête vers l'extérieur.

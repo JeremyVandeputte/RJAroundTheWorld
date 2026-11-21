@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { ChangePasswordForm } from "@/components/auth/change-password-form";
+import { PushSettings } from "@/components/push/push-settings";
 import { SubmitButton } from "@/components/ui/submit-button";
+import { getEnv } from "@/lib/env";
 import { logoutAction } from "@/server/actions/auth";
 import { getCurrentUser } from "@/server/auth/current-user";
 
@@ -39,6 +41,18 @@ export default async function ProfilePage() {
           <ChangePasswordForm />
         </div>
       </section>
+
+      {/* Phone notifications: once the account is usable, and if the server has its keys. */}
+      {!user.mustChangePassword && getEnv().push ? (
+        <section aria-labelledby="push-title">
+          <h2 id="push-title" className="text-lg font-semibold">
+            Notifications sur cet appareil
+          </h2>
+          <div className="mt-2">
+            <PushSettings publicKey={getEnv().push!.publicKey} userId={user.id} />
+          </div>
+        </section>
+      ) : null}
 
       <section className="border-t border-line pt-6">
         <form action={logoutAction}>

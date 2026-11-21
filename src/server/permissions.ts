@@ -161,6 +161,11 @@ export function canBeNotifiedAboutTrip(recipient: PermissionUser, trip: TripAcce
 }
 
 /** Notifications are only shown to logged-in users, about trips they can see. */
+/** Turning phone notifications on for one's own devices: any account that can use the site. */
+export function canReceiveNotifications(actor: Actor): boolean {
+  return effectiveUser(actor) !== null;
+}
+
 export function canReadTripNotification(actor: Actor, trip: TripAccess): boolean {
   return effectiveUser(actor) !== null && canViewTrip(actor, trip);
 }

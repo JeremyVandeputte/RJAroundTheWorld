@@ -250,9 +250,39 @@ export const notifications = sqliteTable(
     /** The recipient is identified in the entry (and is not its author). */
     isTagged: integer("is_tagged", { mode: "boolean" }).notNull().default(false),
     readAt: integer("read_at", { mode: "timestamp_ms" }),
+    /** When it was handed to the phone notification step; null while still to do. */
+    pushedAt: integer("pushed_at", { mode: "timestamp_ms" }),
     createdAt: createdAt(),
   },
-  (t) => [index("notifications_recipient_idx").on(t.recipientId, t.readAt, t.createdAt)],
+  (t) => [
+    index("notifications_recipient_idx").on(t.recipientId, t.readAt, t.createdAt),
+    index("notifications_push_idx").on(t.pushedAt),
+  ],
+);
+
+/**
+ * Devices that receive notifications on screen (web push), one row per browser
+ * or installed application where it was turned on. Tied to the session it was
+ * turned on in: logging out of that device stops its notifications.
+ */
+export const pushSubscriptions = sqliteTable(
+  "push_subscriptions",
+  {
+    id: id(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    sessionId: integer("session_id")
+      .notNull()
+      .references(() => sessions.id, { onDelete: "cascade" }),
+    /** Address given by the browser's push service (Apple, Google, Mozilla, Microsoft). */
+    endpoint: text("endpoint").notNull().unique(),
+    /** Keys used to encrypt the content for this device only. */
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("push_subscriptions_user_idx").on(t.userId), index("push_subscriptions_session_idx").on(t.sessionId)],
 );
 
 /** Site-wide settings, one row per key (for instance the version of the site photo). */

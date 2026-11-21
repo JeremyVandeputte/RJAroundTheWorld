@@ -33,9 +33,16 @@ const envSchema = z
     SESSION_DAYS: positiveNumber(30),
     TRUST_PROXY: optional(z.enum(["true", "false"]).default("false")),
     FFMPEG_PATH: optional(z.string().optional()),
+    // Phone notifications (web push): both keys, made by `npm run push:keys`, or none.
+    VAPID_PUBLIC_KEY: optional(z.string().regex(/^[A-Za-z0-9_-]{80,100}$/, "must be the public key printed by npm run push:keys").optional()),
+    VAPID_PRIVATE_KEY: optional(z.string().regex(/^[A-Za-z0-9_-]{40,50}$/, "must be the private key printed by npm run push:keys").optional()),
+    VAPID_SUBJECT: optional(z.string().regex(/^(https:\/\/|mailto:)\S+$/, "must start with https:// or mailto:").optional()),
   })
   .superRefine((value, ctx) => {
     const url = URL.canParse(value.APP_URL) ? new URL(value.APP_URL) : null;
+    if (Boolean(value.VAPID_PUBLIC_KEY) !== Boolean(value.VAPID_PRIVATE_KEY)) {
+      ctx.addIssue({ code: "custom", path: ["VAPID_PRIVATE_KEY"], message: "VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY go together: set both, or neither" });
+    }
     if (!url) return;
     if (url.protocol !== "http:" && url.protocol !== "https:") {
       ctx.addIssue({ code: "custom", path: ["APP_URL"], message: "must start with http:// or https://" });
@@ -65,6 +72,8 @@ export type Env = {
   trustProxy: boolean;
   /** ffmpeg program used to convert videos; null when videos are kept as sent. */
   ffmpegPath: string | null;
+  /** Phone notifications (web push); null when the keys are not set. */
+  push: { publicKey: string; privateKey: string; subject: string } | null;
 };
 
 export class EnvError extends Error {
@@ -102,6 +111,15 @@ export function parseEnv(raw: Record<string, string | undefined>): Env {
     sessionDays: value.SESSION_DAYS,
     trustProxy: value.TRUST_PROXY === "true",
     ffmpegPath: value.FFMPEG_PATH?.trim() || null,
+    push:
+      value.VAPID_PUBLIC_KEY && value.VAPID_PRIVATE_KEY
+        ? {
+            publicKey: value.VAPID_PUBLIC_KEY,
+            privateKey: value.VAPID_PRIVATE_KEY,
+            // Contact given to the push services; Apple refuses a localhost address.
+            subject: value.VAPID_SUBJECT ?? (appUrl.protocol === "https:" ? appUrl.origin : "mailto:rjaroundtheworld@example.invalid"),
+          }
+        : null,
   };
 }
 
